@@ -1,0 +1,1084 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Receiver Calculator</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@700;900&family=Red+Hat+Text:wght@400;500;600&family=Red+Hat+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: workbench — calculator on the left, receiver instruments on the right, log and tests below. */
+:root{
+  --bg:#eef0ec;--panel:#f8f9f6;--fg:#1b201e;--muted:#5b655f;--line:#d3d8d2;--soft:#e2e6e0;
+  --ti:#14857f;--sg:#b8730c;--ue:#b23a80;--ft:#3f63c9;
+  --ok:#2f7d32;--warn:#a86400;--bad:#b3261e;
+  --display:"Red Hat Display",ui-sans-serif,system-ui,sans-serif;--body:"Red Hat Text",ui-sans-serif,system-ui,sans-serif;--mono:"Red Hat Mono",ui-monospace,Menlo,monospace;}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1211;--panel:#151a19;--fg:#e4e9e5;--muted:#8f9a94;--line:#2a312f;--soft:#1d2422;
+  --ti:#3cc7bf;--sg:#f0a93a;--ue:#ec6cb6;--ft:#7b9bff;--ok:#6cc070;--warn:#e7a43c;--bad:#ff7a6e;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0e1211;--panel:#151a19;--fg:#e4e9e5;--muted:#8f9a94;--line:#2a312f;--soft:#1d2422;
+  --ti:#3cc7bf;--sg:#f0a93a;--ue:#ec6cb6;--ft:#7b9bff;--ok:#6cc070;--warn:#e7a43c;--bad:#ff7a6e;color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.5}
+.wrap{max-width:1240px;margin:0 auto;padding-inline:16px;padding-block:18px 48px;display:flex;flex-direction:column;gap:16px}
+h1{font-family:var(--display);font-weight:900;font-size:clamp(26px,4.5vw,40px);letter-spacing:-.02em;margin:0;line-height:1.1}
+h2{font-family:var(--display);font-weight:700;font-size:17px;margin:0}
+.sub{color:var(--muted);margin:4px 0 0;max-width:70ch}
+.cols{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:900px){.cols{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+input[type=text],select,input[type=number]{font-family:var(--mono);font-size:15px;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:8px 10px}
+#q{flex:1 1 240px;min-width:0;font-size:17px}
+button{font-family:var(--body);font-weight:600;font-size:14px;border:1px solid var(--line);background:var(--panel);color:var(--fg);border-radius:6px;padding:7px 12px;cursor:pointer}
+button.primary{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+button.chip{font-family:var(--mono);font-weight:400;font-size:13px;padding:4px 9px}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--ft);outline-offset:2px}
+label.inline{display:inline-flex;gap:6px;align-items:center;font-size:14px;color:var(--muted)}
+.answer{font-family:var(--mono);font-size:28px;font-weight:500;overflow-wrap:anywhere}
+.pill{display:inline-block;font-family:var(--mono);font-size:12px;padding:2px 8px;border-radius:99px;border:1px solid currentColor}
+.ok{color:var(--ok)}.warn{color:var(--warn)}.bad{color:var(--bad)}.muted{color:var(--muted)}
+.mono{font-family:var(--mono);font-size:13px}
+.steps{margin:0;padding-left:20px;font-family:var(--mono);font-size:13px}
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{text-align:left;padding:5px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:600;color:var(--muted);font-size:12px}
+td.num{font-family:var(--mono);font-variant-numeric:tabular-nums;text-align:right}
+.prow{display:grid;grid-template-columns:2.6em minmax(0,1fr) 7.5em;gap:8px;align-items:center;font-family:var(--mono);font-size:13px}
+.track{height:9px;background:var(--soft);border-radius:5px;overflow:hidden;position:relative}
+.track i{display:block;height:100%}
+.slots{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.slot{border:1px solid var(--line);border-radius:6px;padding:8px;font-family:var(--mono);font-size:12px;display:flex;flex-direction:column;gap:3px;min-width:0}
+.slot.narr{border-color:var(--fg);border-width:2px}
+.slot .sign{font-size:20px;line-height:1}
+.slot .occ{font-weight:500;font-size:15px}
+.stage{display:grid;grid-template-columns:3.2em minmax(0,1fr);gap:8px;font-size:13px}
+.stage b{font-family:var(--mono)}
+.log{max-height:320px;overflow:auto;font-family:var(--mono);font-size:12px;display:flex;flex-direction:column;gap:2px}
+.log div{padding:2px 0;border-bottom:1px dashed var(--line);overflow-wrap:anywhere}
+.tag{display:inline-block;min-width:5.5em;color:var(--muted)}
+canvas{width:100%;height:110px;display:block}
+.gx{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.gx figure{margin:0;min-width:0;display:flex;flex-direction:column;gap:4px}
+.gx svg{width:100%;height:auto;max-width:100%;display:block;background:var(--panel);border:1px solid var(--line);border-radius:6px}
+.rates{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.rates b{display:block;font-family:var(--mono);font-weight:500;font-size:19px;font-variant-numeric:tabular-nums}
+.rates small{color:var(--muted);font-size:12px}
+textarea{width:100%;min-height:90px;font-family:var(--mono);font-size:11px;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:6px;box-sizing:border-box}
+details summary{cursor:pointer;font-weight:600}
+.note{font-size:13px;color:var(--muted);max-width:75ch}
+.ansbox{white-space:pre-wrap;font-size:16px;line-height:1.6;overflow-wrap:anywhere;min-height:1.6em}
+button.reading{display:block;width:100%;text-align:left;font-weight:500;line-height:1.4;padding:9px 12px}
+#pin{min-height:70px;font-size:12px}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Receiver Calculator</h1>
+    <p class="sub">Type a math problem or any question. Math goes to the exact engine. Anything else goes to Claude, which only lists the ways it could be meant; the RPCS-1 receiver (FT → TI → AR → SG, with UE governing change) decides which reading to commit to or holds them open, and only then does Claude answer that reading. Your feedback trains the receiver either way.</p>
+  </header>
+
+  <div class="cols">
+    <section class="panel" aria-labelledby="calc-h">
+      <h2 id="calc-h">Ask</h2>
+      <div class="row">
+        <input type="text" id="q" value="(2+i)^2" aria-label="Math problem or any question" autocomplete="off">
+        <button class="primary" id="solve">Go</button>
+      </div>
+      <div class="row">
+        <label class="inline" for="prec">Precedence</label>
+        <select id="prec"><option value="standard">Standard</option><option value="compare">Compare with left-to-right</option><option value="disabled">No rule assumed</option></select>
+      </div>
+      <div class="row" id="examples"></div>
+      <details>
+        <summary>Pinned context (optional)</summary>
+        <p class="note" style="margin:6px 0">Anything here is sent with every question, so you don't have to re-explain yourself. It stays in this browser. Paste your pinned card, or a few lines about how you use words.</p>
+        <textarea id="pin" aria-label="Pinned context"></textarea>
+      </details>
+      <div id="result" class="panel" style="background:var(--bg)"></div>
+    </section>
+
+    <section class="panel" aria-labelledby="rx-h">
+      <div class="row" style="justify-content:space-between"><h2 id="rx-h">Receiver</h2><span class="mono">narrator (+): <b id="narr"></b></span></div>
+      <div>
+        <p class="eyebrow">Parameters · value / effective (after slot strategy)</p>
+        <div id="params" style="display:flex;flex-direction:column;gap:6px;margin-top:6px"></div>
+      </div>
+      <div>
+        <p class="eyebrow">Slots · sign, occupant, strategy Θ, utility Q by parameter</p>
+        <div class="slots" id="slots" style="margin-top:6px"></div>
+      </div>
+      <div class="rates">
+        <div><b id="r-ad">0</b><small>adaptation (EMA |ΔR|)</small></div>
+        <div><b id="r-sw">0</b><small>switches per problem (EMA)</small></div>
+        <div><b id="r-ue">0</b><small>UE · step η = η₀·UE</small></div>
+      </div>
+      <div>
+        <p class="eyebrow">Reward over problems (dots) and UE (line)</p>
+        <canvas id="perf" aria-label="Reward and UE over problems"></canvas>
+      </div>
+      <div class="row">
+        <label class="inline" for="seed">Seed</label><input type="number" id="seed" value="1" style="width:5em">
+        <button id="reset">Reset</button>
+        <button id="step1">Run next suite item</button>
+        <button id="step20">Run 20</button>
+      </div>
+      <details>
+        <summary>Model settings</summary>
+        <div class="row" style="margin-top:8px">
+          <label class="inline" for="swm">Switching</label>
+          <select id="swm"><option value="strategy">Strategy-guided (softmax on Q)</option><option value="random">Random</option><option value="fixed">Fixed</option></select>
+          <label class="inline"><input type="checkbox" id="stay" checked> Strategy stays on slot</label>
+          <label class="inline"><input type="checkbox" id="adapt" checked> Adaptive parameters</label>
+          <label class="inline" for="sign">Slot signs</label>
+          <select id="sign"><option value="labels">Labels only (+ picks narrator)</option><option value="gain">Experimental: sign scales occupant</option></select>
+        </div>
+        <p class="note">Settings apply on Reset. "Labels only" is the default because the numeric meaning of the − slots is not yet specified; the experimental option is an unvalidated guess.</p>
+      </details>
+    </section>
+  </div>
+
+  <section class="panel" aria-labelledby="pipe-h">
+    <h2 id="pipe-h">Last pass through the pipeline</h2>
+    <div id="pipe" class="note">Solve a problem to see each stage.</div>
+  </section>
+
+  <div class="cols">
+    <section class="panel" aria-labelledby="log-h">
+      <h2 id="log-h">Change log</h2>
+      <p class="note" style="margin:0">Every parameter update, UE change and slot switch, with its reason.</p>
+      <div class="log" id="log"></div>
+    </section>
+    <section class="panel" aria-labelledby="t-h">
+      <h2 id="t-h">Tests and experiments</h2>
+      <div class="row"><button id="runA">Run acceptance tests</button><button id="runE">Run experiments A–E</button><button id="copy">Copy results JSON</button></div>
+      <div id="tests" class="tbl"></div>
+      <div id="exps" class="tbl"></div>
+      <textarea id="json" aria-label="Results JSON" readonly hidden></textarea>
+    </section>
+  </div>
+
+  <section class="panel" aria-labelledby="rules-h">
+    <h2 id="rules-h">Rules in this build (provisional ones marked)</h2>
+    <ul class="note" style="margin:0;padding-left:18px">
+      <li><b>FT</b> admits a candidate if its plausibility p ≥ 0.6 · FT_eff · max p. Invalid parses are never admitted. Lowered when the intended reading was filtered out; raised when a higher threshold would have rejected a wrong pick and kept the right one. <i>Provisional.</i></li>
+      <li><b>TI</b> sets the memory decay λ = 0.3 + 0.65 · TI_eff, so lower TI = shorter window = faster response (same convention as Receiver Life). Adjusted by comparing short (λ=0.3) and long (λ=0.95) window predictions. <i>Provisional.</i></li>
+      <li><b>AR</b> scores admitted candidates by ln p + integrated evidence, and commits only if the top score leads by margin m = 0.35 · (0.5 + Θ of the + slot). Otherwise it reports the ambiguity and asks. AR has no parameter of its own.</li>
+      <li><b>SG</b> sets the confidence gain (0.5 + 3 · SG_eff) and the weight of evidence written to memory (0.5 + SG_eff). Adjusted for calibration (confidence vs outcome). Confidence never overrides the verifier. <i>Provisional.</i></li>
+      <li><b>UE</b> sets the adaptation step η = 0.15 · UE_eff and the switch-attempt probability 0.5 · UE_eff. UE itself changes only by: drive = (ē − 0.25); ΔUE = 0.15 · drive · (1 − UE) if drive &gt; 0, else 0.15 · drive · UE; minus 0.15 · 0.3 · instability · UE. <i>Provisional hypothesis.</i></li>
+      <li><b>Slots</b>: each parameter's data channel updates Θ of the slot it occupies. Θ biases the occupant's effective value by 0.3 · (Θ − ½). Q[k][j] tracks reward when parameter j sits in slot k; reassignment chooses among "stay" and the six transpositions by softmax on ΔQ (τ = 0.08).</li>
+      <li><b>Gaussian mode</b>: <span class="mono">(2+i)^2</span>, <span class="mono">(3+2i)^2</span>, <span class="mono">square of 12+i</span> or <span class="mono">square of 7</span> (read as 7 + i) shows z², its triangle, the mirror vectors, and the primes in the hypotenuse with their two-square and root-pair forms. It is exact and bypasses the receiver.</li>
+      <li>Math in words still uses keyword rules only (no LLM). "Combine A and B" with a [context] tag is the separate add-versus-multiply selection case.</li>
+      <li><b>Any question</b> (anything the math engine cannot read): Claude lists 1–4 readings with probabilities p and a stable key per sense, without answering. Those readings go through the same FT → TI → AR → SG pipeline as math interpretations: FT drops unlikely readings, TI adds what you chose before for the same ambiguity (keyed like <span class="mono">word:bear</span>), AR commits or holds the readings open and asks. Claude then answers only the reading the receiver chose or you picked. General answers are <i>not verified</i>; SG confidence is relevance, not proof. Each question uses your own Claude usage.</li>
+      <li>Learned state (parameters, slots, memory) is kept in this browser between visits. Reset clears it.</li>
+    </ul>
+  </section>
+</div>
+<script>
+// ===== Module 1: MathEngine — exact rational arithmetic, parser, solver, verifier =====
+// Independent of the receiver. No eval(). Numbers are exact rationals (BigInt).
+(function(G){
+'use strict';
+const ab=x=>x<0n?-x:x;
+function gcd(a,b){a=ab(a);b=ab(b);while(b){[a,b]=[b,a%b];}return a;}
+class Q{
+  constructor(n,d=1n){if(d===0n)throw new MathError('Division by zero');if(d<0n){n=-n;d=-d;}const g=gcd(n,d)||1n;this.n=n/g;this.d=d/g;}
+  static of(x){return x instanceof Q?x:new Q(BigInt(x));}
+  static parse(s){if(s.includes('.')){const[a,b]=s.split('.');return new Q(BigInt(a||'0')*10n**BigInt(b.length)+BigInt(b||'0'),10n**BigInt(b.length));}return new Q(BigInt(s));}
+  add(o){return new Q(this.n*o.d+o.n*this.d,this.d*o.d);}
+  sub(o){return new Q(this.n*o.d-o.n*this.d,this.d*o.d);}
+  mul(o){return new Q(this.n*o.n,this.d*o.d);}
+  div(o){if(o.n===0n)throw new MathError('Division by zero');return new Q(this.n*o.d,this.d*o.n);}
+  neg(){return new Q(-this.n,this.d);}
+  isZero(){return this.n===0n;} isInt(){return this.d===1n;}
+  eq(o){return this.n===o.n&&this.d===o.d;}
+  pow(k){ if(!k.isInt())throw new MathError('Non-integer exponents are not supported exactly');
+    let e=k.n; if(ab(e)>4096n)throw new MathError('Exponent too large');
+    if(e<0n){if(this.isZero())throw new MathError('Division by zero');return new Q(this.d**(-e),this.n**(-e));}
+    return new Q(this.n**e,this.d**e);}
+  toNumber(){return Number(this.n)/Number(this.d);}
+  toString(){return this.d===1n?this.n.toString():this.n+'/'+this.d;}
+}
+class MathError extends Error{constructor(m){super(m);this.name='MathError';}}
+
+// ---- Polynomials in one variable: Map degree -> Q ----
+class Poly{
+  constructor(m=new Map(),v=null){this.m=m;this.v=v;}
+  static c(q){const m=new Map();if(!q.isZero())m.set(0,q);return new Poly(m);}
+  static x(v){return new Poly(new Map([[1,new Q(1n)]]),v);}
+  deg(){let d=-Infinity;for(const k of this.m.keys())d=Math.max(d,k);return d;}
+  coef(k){return this.m.get(k)||new Q(0n);}
+  isConst(){return this.deg()<=0;}
+  _var(o){if(this.v&&o.v&&this.v!==o.v)throw new MathError('Only one variable is supported (found '+this.v+' and '+o.v+')');return this.v||o.v;}
+  add(o){const m=new Map(this.m);for(const[k,c]of o.m){const r=(m.get(k)||new Q(0n)).add(c);r.isZero()?m.delete(k):m.set(k,r);}return new Poly(m,this._var(o));}
+  neg(){const m=new Map();for(const[k,c]of this.m)m.set(k,c.neg());return new Poly(m,this.v);}
+  sub(o){return this.add(o.neg());}
+  mul(o){const v=this._var(o),m=new Map();for(const[a,c]of this.m)for(const[b,d]of o.m){const r=(m.get(a+b)||new Q(0n)).add(c.mul(d));r.isZero()?m.delete(a+b):m.set(a+b,r);}
+    if(this.deg()+o.deg()>64)throw new MathError('Degree too high');return new Poly(m,v);}
+  div(o){if(!o.isConst())throw new MathError('Division by an expression containing '+(o.v||'a variable')+' is not supported');
+    const c=o.coef(0);if(c.isZero())throw new MathError('Division by zero');const m=new Map();for(const[k,a]of this.m)m.set(k,a.div(c));return new Poly(m,this.v);}
+  pow(o){if(!o.isConst())throw new MathError('Variable exponents are not supported');const e=o.coef(0);
+    if(this.isConst())return Poly.c(this.coef(0).pow(e));
+    if(!e.isInt()||e.n<0n)throw new MathError('Only non-negative whole-number powers of '+this.v+' are supported');
+    let r=Poly.c(new Q(1n));for(let i=0n;i<e.n;i++)r=r.mul(this);return r;}
+  toString(){const v=this.v||'x';const ks=[...this.m.keys()].sort((a,b)=>b-a);if(!ks.length)return'0';
+    return ks.map((k,i)=>{let c=this.m.get(k),s=c.n<0n?'-':'+';c=c.n<0n?c.neg():c;
+      let body=k===0?c.toString():((c.eq(new Q(1n))?'':(c.isInt()?c.toString():'('+c+')'))+v+(k>1?'^'+k:''));
+      return i===0?(s==='-'?'-':'')+body:' '+s+' '+body;}).join('');}
+}
+
+// ---- Tokenizer ----
+function tokenize(src){
+  const s=src.replace(/[×·∙]/g,'*').replace(/÷/g,'/').replace(/[−–—]/g,'-').replace(/\*\*/g,'^');
+  const out=[];let i=0;
+  while(i<s.length){const ch=s[i];
+    if(/\s/.test(ch)){i++;continue;}
+    if(/[0-9.]/.test(ch)){let j=i;while(j<s.length&&/[0-9.]/.test(s[j]))j++;const t=s.slice(i,j);
+      if((t.match(/\./g)||[]).length>1||t==='.')throw new MathError('Malformed number "'+t+'"');out.push({k:'num',v:t,p:i});i=j;continue;}
+    if(/[a-zA-Z]/.test(ch)){let j=i;while(j<s.length&&/[a-zA-Z]/.test(s[j]))j++;const w=s.slice(i,j);
+      if(w.length>1)throw new MathError('Unknown word "'+w+'" (use a single-letter variable)');out.push({k:'var',v:w,p:i});i=j;continue;}
+    if('+-*/^()='.includes(ch)){out.push({k:ch,p:i});i++;continue;}
+    throw new MathError('Unexpected character "'+ch+'"');}
+  return out;
+}
+
+// ---- Parser. Conventions:
+//  prec: 'standard' (^ > unary- > * / implicit > + -) | 'ltr' (+ - * / implicit applied left to right; ^ and parentheses still bind first)
+//  implicit: 'same' (2(3) binds like *) | 'high' (implicit product binds tighter than * and /)
+function parse(src,conv={prec:'standard',implicit:'same'}){
+  const T=tokenize(src);if(!T.length)throw new MathError('Empty input');
+  let i=0,sawImplicit=false;const pk=()=>T[i],nx=()=>T[i++];
+  const startsFactor=t=>t&&(t.k==='num'||t.k==='var'||t.k==='(');
+  function expect(k){const t=nx();if(!t||t.k!==k)throw new MathError(t?'Expected "'+k+'" but found "'+(t.v||t.k)+'"':'Missing "'+k+'"');}
+  function primary(){const t=nx();if(!t)throw new MathError('Expression ends unexpectedly');
+    if(t.k==='num')return{t:'num',v:Q.parse(t.v)};
+    if(t.k==='var')return{t:'var',name:t.v};
+    if(t.k==='('){if(pk()&&pk().k===')')throw new MathError('Empty parentheses');const e=expr();expect(')');return{t:'grp',e};}
+    throw new MathError('Unexpected "'+t.k+'"');}
+  function power(){const b=primary();if(pk()&&pk().k==='^'){nx();return{t:'bin',op:'^',l:b,r:unary()};}return b;}
+  function unary(){if(pk()&&(pk().k==='-'||pk().k==='+')){const o=nx().k;const e=unary();return o==='-'?{t:'neg',e}:e;}return power();}
+  function implicitChain(){let l=unary();while(conv.implicit==='high'&&startsFactor(pk())){sawImplicit=true;l={t:'bin',op:'*',imp:true,l,r:power()};}return l;}
+  function term(){let l=implicitChain();
+    for(;;){const t=pk();
+      if(t&&(t.k==='*'||t.k==='/')){nx();l={t:'bin',op:t.k,l,r:implicitChain()};}
+      else if(conv.implicit!=='high'&&startsFactor(t)){sawImplicit=true;l={t:'bin',op:'*',imp:true,l,r:power()};}
+      else return l;}}
+  function exprStd(){let l=term();while(pk()&&(pk().k==='+'||pk().k==='-')){const o=nx().k;l={t:'bin',op:o,l,r:term()};}return l;}
+  function exprLtr(){let l=unary();
+    for(;;){const t=pk();
+      if(t&&'+-*/'.includes(t.k)){nx();l={t:'bin',op:t.k,l,r:unary()};}
+      else if(startsFactor(t)){sawImplicit=true;l={t:'bin',op:'*',imp:true,l,r:power()};}
+      else return l;}}
+  const expr=conv.prec==='ltr'?exprLtr:exprStd;
+  const lhs=expr();let rhs=null;
+  if(pk()&&pk().k==='='){nx();rhs=expr();}
+  if(i<T.length){const t=T[i];throw new MathError(t.k==='='?'More than one "=" sign':'Unexpected "'+(t.v||t.k)+'" at position '+(t.p+1));}
+  return{lhs,rhs,sawImplicit,conv};
+}
+function varsOf(n,s=new Set()){if(!n)return s;if(n.t==='var')s.add(n.name);if(n.l)varsOf(n.l,s);if(n.r)varsOf(n.r,s);if(n.e)varsOf(n.e,s);return s;}
+
+// ---- Exact evaluation to Poly, with step trace ----
+function toPoly(n,steps){
+  switch(n.t){
+    case'num':return Poly.c(n.v);
+    case'var':return Poly.x(n.name);
+    case'grp':return toPoly(n.e,steps);
+    case'neg':{const r=toPoly(n.e,steps).neg();steps&&steps.push('−('+show(n.e)+') = '+r);return r;}
+    case'bin':{const a=toPoly(n.l,steps),b=toPoly(n.r,steps);let r;
+      if(n.op==='+')r=a.add(b);else if(n.op==='-')r=a.sub(b);else if(n.op==='*')r=a.mul(b);else if(n.op==='/')r=a.div(b);else r=a.pow(b);
+      steps&&steps.push(a+' '+({'*':'×','/':'÷'}[n.op]||n.op)+' '+b+' = '+r);return r;}
+  }
+}
+// Fully parenthesised structure (shows the interpretation)
+function show(n){switch(n.t){case'num':return n.v.toString();case'var':return n.name;case'grp':return show(n.e);
+  case'neg':return'−'+wrap(n.e);case'bin':return'('+show(n.l)+' '+({'*':'×','/':'÷'}[n.op]||n.op)+' '+show(n.r)+')';}}
+function wrap(n){return n.t==='num'||n.t==='var'?show(n):'('+show(n)+')';}
+
+// ---- Independent floating-point evaluator (separate code path, used only for verification) ----
+function fev(n,x){switch(n.t){case'num':return n.v.toNumber();case'var':return x;case'grp':return fev(n.e,x);case'neg':return-fev(n.e,x);
+  case'bin':{const a=fev(n.l,x),b=fev(n.r,x);switch(n.op){case'+':return a+b;case'-':return a-b;case'*':return a*b;case'/':return a/b;case'^':return Math.pow(a,b);}}}}
+const close=(a,b)=>Number.isFinite(a)&&Number.isFinite(b)&&Math.abs(a-b)<=1e-9*Math.max(1,Math.abs(a),Math.abs(b));
+
+// ---- Solve: returns {kind, answer, display, steps, verify:{status,detail}} ----
+// fault: test hook that corrupts the exact answer so the verifier's failure path can be exercised.
+function solve(src,conv,opts={}){
+  const P=parse(src,conv),steps=[];
+  const vars=new Set([...varsOf(P.lhs),...varsOf(P.rhs)]);
+  if(vars.size>1)throw new MathError('Only one variable is supported (found '+[...vars].join(', ')+')');
+  const v=[...vars][0]||null;
+  const structure=show(P.lhs)+(P.rhs?' = '+show(P.rhs):'');
+  if(!P.rhs){
+    const p=toPoly(P.lhs,steps);
+    if(p.isConst()){let ans=p.coef(0);if(opts.fault)ans=ans.add(new Q(1n));
+      const f=fev(P.lhs,0);const ok=close(f,ans.toNumber());
+      return{kind:'value',answer:ans.toString(),approx:ans.toNumber(),structure,steps,sawImplicit:P.sawImplicit,
+        verify:{status:ok?'pass':(Number.isFinite(f)?'fail':'inconclusive'),detail:'Independent floating-point evaluation gives '+fmt(f)+(ok?' (matches)':' (does not match '+ans+')')}};}
+    let res=p;if(opts.fault)res=res.add(Poly.c(new Q(1n)));
+    const pts=[-1.5,0.5,2.25];let ok=true;const det=[];
+    for(const t of pts){const a=fev(P.lhs,t),b=evalPolyF(res,t);det.push(v+'='+t+': '+fmt(a)+' vs '+fmt(b));if(!close(a,b))ok=false;}
+    return{kind:'simplify',answer:res.toString(),structure,steps,sawImplicit:P.sawImplicit,
+      verify:{status:ok?'pass':'fail',detail:'Original and simplified forms compared at 3 points: '+det.join('; ')}};
+  }
+  const L=toPoly(P.lhs,steps),R=toPoly(P.rhs,steps),D=L.sub(R);
+  steps.push('Move everything to one side: '+D+' = 0');
+  const d=D.deg();
+  if(d===-Infinity)return{kind:'identity',answer:'true for every '+(v||'value'),structure,steps,sawImplicit:P.sawImplicit,verify:{status:'pass',detail:'Both sides reduce to the same expression'}};
+  if(d===0)return{kind:'none',answer:'no solution',structure,steps,sawImplicit:P.sawImplicit,verify:{status:'pass',detail:'Reduces to '+D.coef(0)+' = 0, which is false'}};
+  if(d===1){let x=D.coef(0).neg().div(D.coef(1));steps.push(v+' = '+D.coef(0).neg()+' ÷ '+D.coef(1)+' = '+x);if(opts.fault)x=x.add(new Q(1n));
+    // verification: substitute into the ORIGINAL two sides, exactly and in floating point
+    const sub=n=>toPoly(substitute(n,x),null).coef(0);
+    const le=sub(P.lhs),re=sub(P.rhs),fl=fev(P.lhs,x.toNumber()),fr=fev(P.rhs,x.toNumber());
+    const ok=le.eq(re)&&close(fl,fr);
+    return{kind:'solution',answer:v+' = '+x,value:x.toString(),structure,steps,sawImplicit:P.sawImplicit,
+      verify:{status:ok?'pass':'fail',detail:'Substituting '+v+' = '+x+': left = '+le+', right = '+re+(ok?' (equal)':' (NOT equal)')}};}
+  if(d===2){const a=D.coef(2),b=D.coef(1),c=D.coef(0),disc=b.mul(b).sub(new Q(4n).mul(a).mul(c));
+    steps.push('Quadratic: discriminant = '+disc);
+    if(disc.n<0n)return{kind:'none',answer:'no real solution',structure,steps,sawImplicit:P.sawImplicit,verify:{status:'pass',detail:'Discriminant '+disc+' < 0'}};
+    const rt=qsqrt(disc);if(!rt){const r1=(-b.toNumber()+Math.sqrt(disc.toNumber()))/(2*a.toNumber()),r2=(-b.toNumber()-Math.sqrt(disc.toNumber()))/(2*a.toNumber());
+      return{kind:'approx',answer:v+' ≈ '+fmt(r1)+' or '+v+' ≈ '+fmt(r2)+' (irrational; approximate)',structure,steps,sawImplicit:P.sawImplicit,verify:{status:'inconclusive',detail:'Roots are irrational, so they cannot be checked exactly'}};}
+    const xs=[b.neg().add(rt).div(a.mul(new Q(2n))),b.neg().sub(rt).div(a.mul(new Q(2n)))].filter((x,k,arr)=>k===0||!x.eq(arr[0]));
+    const ok=xs.every(x=>{const s=n=>toPoly(substitute(n,x),null).coef(0);return s(P.lhs).eq(s(P.rhs));});
+    return{kind:'solution',answer:xs.map(x=>v+' = '+x).join(' or '),value:xs.map(String).join(','),structure,steps,sawImplicit:P.sawImplicit,verify:{status:ok?'pass':'fail',detail:'Each root substituted into both original sides'}};}
+  throw new MathError('Equations of degree '+d+' are not supported');
+}
+function qsqrt(q){const s=n=>{if(n<0n)return null;if(n<2n)return n;let x=BigInt(Math.floor(Math.sqrt(Number(n))));while(x*x>n)x--;while((x+1n)*(x+1n)<=n)x++;return x*x===n?x:null;};
+  const a=s(q.n),b=s(q.d);return a!==null&&b!==null?new Q(a,b):null;}
+function substitute(n,x){switch(n.t){case'var':return{t:'num',v:x};case'num':return n;case'grp':return{t:'grp',e:substitute(n.e,x)};case'neg':return{t:'neg',e:substitute(n.e,x)};
+  case'bin':return{...n,l:substitute(n.l,x),r:substitute(n.r,x)};}}
+function evalPolyF(p,t){let s=0;for(const[k,c]of p.m)s+=c.toNumber()*Math.pow(t,k);return s;}
+function fmt(f){return Number.isFinite(f)?(+f.toPrecision(12)).toString():String(f);}
+
+// ---- Natural-language translation (keyword rules; no LLM) ----
+// Returns {text: math string, cues:{...}} or null if not natural language.
+const NUM={zero:0,one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,eleven:11,twelve:12,thirteen:13,fourteen:14,fifteen:15,sixteen:16,seventeen:17,eighteen:18,nineteen:19,twenty:20,thirty:30,forty:40,fifty:50,sixty:60,seventy:70,eighty:80,ninety:90,hundred:100};
+function wordsToNumbers(s){return s.replace(/\b(twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety)[\s-](one|two|three|four|five|six|seven|eight|nine)\b/g,(m,a,b)=>String(NUM[a]+NUM[b]))
+  .replace(new RegExp('\\b('+Object.keys(NUM).join('|')+')\\b','g'),m=>String(NUM[m]));}
+function translateNL(raw){
+  let s=raw.toLowerCase().trim();
+  if(!/[a-z]{2,}/.test(s.replace(/\[[^\]]*\]/g,'')))return null; // plain math
+  const domain=(s.match(/\[([a-z]+)\]/)||[])[1]||null;s=s.replace(/\[[^\]]*\]/g,' ');
+  let mode='value';
+  if(/\bsolve\b/.test(s))mode='solve';else if(/\bsimplify\b|\bexpand\b/.test(s))mode='simplify';
+  s=s.replace(/\b(what is|what's|calculate|compute|evaluate|find|solve|simplify|expand|for [a-z]|please)\b/g,' ').replace(/[?,]/g,' ');
+  s=wordsToNumbers(s);
+  // operation-selection case: "combine A and B" (+ optional cue words)
+  const comb=s.match(/(-?\d+(?:\.\d+)?)\s*([a-z ]*?)\s*\band\b\s*(-?\d+(?:\.\d+)?)/);
+  const opWords=/\b(plus|minus|times|multiplied|divided|over|squared|cubed|power|sum|product|difference|quotient|added|subtract|less)\b/;
+  if(comb&&!opWords.test(s)){
+    const cues={add:0,mul:0};
+    if(/\b(total|altogether|more|combined|plus|in all)\b/.test(s))cues.add++;
+    if(/\b(groups?|bags?|rows?|each|sets?|boxes|of)\b/.test(s))cues.mul++;
+    return{kind:'opselect',a:comb[1],b:comb[3],domain,cues};}
+  s=s.replace(/\bthe sum of (\S+) and (\S+)/g,'($1 + $2)').replace(/\bthe product of (\S+) and (\S+)/g,'($1 * $2)')
+     .replace(/\bthe difference of (\S+) and (\S+)/g,'($1 - $2)').replace(/\bthe quotient of (\S+) and (\S+)/g,'($1 / $2)')
+     .replace(/\bto the power of\b|\braised to\b/g,'^').replace(/\bsquared\b/g,'^2').replace(/\bcubed\b/g,'^3')
+     .replace(/\bmultiplied by\b|\btimes\b/g,'*').replace(/\bdivided by\b|\bover\b/g,'/')
+     .replace(/\bplus\b|\badded to\b/g,'+').replace(/\bminus\b|\bless\b/g,'-').replace(/\bequals\b|\bis equal to\b|\bis\b/g,'=')
+     .replace(/\bof\b/g,'*').replace(/\s+/g,' ').trim();
+  if(/[a-z]{2,}/.test(s))throw new MathError('Could not interpret the words in "'+raw+'"');
+  const ops=new Set((s.match(/[+\-*/]/g)||[]));
+  const mixedPrec=[...ops].some(o=>'+-'.includes(o))&&[...ops].some(o=>'*/'.includes(o));
+  return{kind:'math',text:s,mode,domain,spokenMixed:mixedPrec};
+}
+
+G.MathEngine={Q,Poly,MathError,tokenize,parse,show,solve,translateNL,fev};
+})(typeof globalThis!=='undefined'?globalThis:window);
+
+</script>
+<script>
+// ===== Module 2: Interpreter (candidate generation) + Module 3: Receiver controller =====
+(function(G){
+'use strict';
+const M=G.MathEngine;
+const PARAMS=['TI','SG','UE','FT'];           // parameter identities (index = identity)
+const SIGNS=['+','-','-','-'];                // slot signs (index = slot identity)
+const clamp=(x,a=0,b=1)=>x<a?a:x>b?b:x;
+// PROVISIONAL UE feedback rule. err = EMA of recent error, iota = instability (switch + parameter movement).
+//   drive = kErr·(err − eRef)
+//   ΔUE = rho·drive·(1−UE)  if drive > 0   (errors above target push UE up, saturating near 1)
+//   ΔUE = rho·drive·UE      if drive ≤ 0   (doing well lets UE decay, slowing near its floor)
+//   minus rho·kCost·iota·UE                 (instability costs elasticity)
+function ueDelta(UE,err,iota,u){const drive=u.kErr*(err-u.eRef);return u.rho*(drive>0?drive*(1-UE):drive*UE)-u.rho*u.kCost*iota*UE;}
+function rng(seed){let r=(seed>>>0)||1;return()=>{r^=r<<13;r^=r>>>17;r^=r<<5;return(r>>>0)/4294967296;};}
+
+// ---------- Interpreter: turns input into candidate interpretations (no receiver logic here) ----------
+// settings.precedence: 'standard' | 'compare' (compare with left-to-right) | 'disabled' (no precedence rule assumed)
+function generateCandidates(input,settings={precedence:'standard'}){
+  const out={input,candidates:[],inherent:false,ctx:'',kind:'math',note:''};
+  let nl;try{nl=M.translateNL(input);}catch(e){out.kind='error';out.error=e.message;return out;}
+  if(nl&&nl.kind==='opselect'){
+    out.kind='opselect';out.ctx='op|'+(nl.domain||'none');out.domain=nl.domain;
+    const a=M.Q.parse(nl.a),b=M.Q.parse(nl.b);
+    let pa=.5,pm=.5;if(nl.cues.add&&!nl.cues.mul){pa=.8;pm=.2;}else if(nl.cues.mul&&!nl.cues.add){pa=.2;pm=.8;}
+    const mk=(id,label,p,f,sym)=>{let r;try{r={answer:f().toString()};}catch(e){r={error:e.message};}
+      return{id,label,p,expr:nl.a+' '+sym+' '+nl.b,...r,verify:r.error?null:{status:'pass',detail:'Exact rational arithmetic'}};};
+    out.candidates=[mk('add','addition',pa,()=>a.add(b),'+'),mk('mul','multiplication',pm,()=>a.mul(b),'×'),
+      mk('sub','subtraction',.12,()=>a.sub(b),'−'),mk('div','division',.08,()=>a.div(b),'÷')];
+    out.inherent=true;out.note='The words "'+input+'" do not state which operation joins '+nl.a+' and '+nl.b+'.';
+    return out;}
+  const text=nl?nl.text:input;out.text=text;
+  const precs=settings.precedence==='standard'&&!(nl&&nl.spokenMixed)?['standard']:['standard','ltr'];
+  const convs=[];for(const p of precs)for(const im of['same','high'])convs.push({prec:p,implicit:im});
+  const raw=convs.map(c=>{try{return{c,r:M.solve(text,c)};}catch(e){return{c,err:e};}});
+  const ok=raw.filter(x=>x.r);
+  if(!ok.length){out.kind='error';out.error=raw[0].err.message;return out;}
+  // implicit-multiplication conventions only matter when the expression actually has an implicit product
+  const imp=ok.some(x=>x.r.sawImplicit);
+  const groups=new Map();
+  for(const x of ok){if(!imp&&x.c.implicit==='high')continue;
+    const key=x.r.answer;const lab=(x.c.prec==='standard'?'standard precedence':'left-to-right')+(imp?(x.c.implicit==='high'?', implicit × binds tighter':', implicit × same as ÷'):'');
+    if(groups.has(key)){groups.get(key).labels.push(lab);continue;}
+    groups.set(key,{labels:[lab],r:x.r,c:x.c,id:(x.c.prec==='standard'?'std':'ltr')+(imp?'-'+x.c.implicit:'')});}
+  const reason=[];if(precs.length>1)reason.push(settings.precedence==='disabled'?'no operator-precedence rule is assumed':nl&&nl.spokenMixed?'spoken arithmetic does not mark grouping':'a competing left-to-right convention was requested');
+  if(imp&&groups.size>1)reason.push('implicit multiplication next to division has no universal convention');
+  const precConflict=precs.length>1&&new Set(ok.filter(x=>x.c.implicit==='same').map(x=>x.r.answer)).size>1;
+  const impConflict=imp&&new Set(ok.filter(x=>x.c.prec==='standard').map(x=>x.r.answer)).size>1;
+  out.ctx=groups.size>1?'conv|'+(impConflict?'implicit':'')+(precConflict?'precedence':''):null; // memory only for real conflicts
+  out.candidates=[...groups.values()].map((g,i)=>({id:g.id,label:g.labels.join(' / '),p:groups.size>1?.5:1,expr:g.r.structure,answer:g.r.answer,result:g.r,verify:g.r.verify}));
+  out.inherent=groups.size>1;out.note=out.inherent?'Ambiguous: '+reason.join('; ')+'.':'';
+  out.mode=nl?nl.mode:null;
+  return out;
+}
+
+// ---------- Receiver controller ----------
+const DEFAULTS={
+  seed:1, initHigh:[0.75,1.0],
+  beta:0.3,            // how strongly a slot's strategy Θ biases its occupant's effective setting
+  signRule:'labels',   // 'labels': signs are labels; + only selects the narrator (no numeric effect). 'gain': EXPERIMENTAL, + occupant ×(1+γ), − occupants ×(1−γ/3)
+  gamma:0.2,
+  eta0:0.15,           // parameter adaptation step = eta0 · UE_eff  (monotonic in UE)
+  kappa:0.5,           // switch-attempt probability per problem = kappa · UE_eff (monotonic in UE)
+  tau:0.08,            // softmax temperature for strategy-guided reassignment
+  alphaTheta:0.2, alphaQ:0.25, q0:0.5,
+  arMargin:0.35,       // AR ambiguity margin m = arMargin·(0.5+Θ_+)
+  switchMode:'strategy', // 'strategy' | 'random' | 'fixed'
+  adapt:true, stayOnSlot:true,
+  ue:{enabled:true, rho:0.15, kErr:1.0, kCost:0.3, eRef:0.25, emaErr:0.3}, // PROVISIONAL UE feedback rule
+  evalWindow:5,
+};
+class Receiver{
+  constructor(cfg={}){this.cfg=JSON.parse(JSON.stringify({...DEFAULTS,...cfg,ue:{...DEFAULTS.ue,...(cfg.ue||{})}}));this.reset();}
+  reset(){const c=this.cfg;this.rand=rng(c.seed);
+    this.params=PARAMS.map((id,j)=>({id,value:c.initHigh[0]+(c.initHigh[1]-c.initHigh[0])*this.rand(),history:[],channel:[]}));
+    const p=[0,1,2,3];for(let k=3;k>0;k--){const m=Math.floor(this.rand()*(k+1));[p[k],p[m]]=[p[m],p[k]];}
+    this.occupant=p.slice();               // occupant[k] = parameter index in slot k
+    this.slots=SIGNS.map((sign,k)=>({id:k,sign,theta:0.5,thetaHistory:[],Q:[c.q0,c.q0,c.q0,c.q0],Qn:[0,0,0,0],rewards:[]}));
+    this.memory={};this.t=0;this.log=[];this.rewardHist=[];this.errEma=c.ue.eRef;this.pendingSwitches=[];
+    this.stats={switches:0,unnecessary:0,evaluated:0,adaptRate:0,switchRate:0,adaptHist:[],switchHist:[],ueHist:[]};
+    this.records=[];}
+  slotOf(j){return this.occupant.indexOf(j);}
+  narrator(){return PARAMS[this.occupant[0]];}
+  eff(j){const k=this.slotOf(j),c=this.cfg;let v=this.params[j].value+c.beta*(this.slots[k].theta-0.5);
+    if(c.signRule==='gain')v*=SIGNS[k]==='+'?1+c.gamma:1-c.gamma/3;return clamp(v);}
+  effAll(){return{TI:this.eff(0),SG:this.eff(1),UE:this.eff(2),FT:this.eff(3)};}
+  L(type,msg,data){this.log.push({t:this.t,type,msg,data});if(this.log.length>4000)this.log.shift();}
+  memRead(ctx,lambda){const ev=this.memory[ctx]||[];const s={};for(const e of ev){const age=this.t-e.t;s[e.label]=(s[e.label]||0)+e.w*Math.pow(lambda,age);}return s;}
+
+  // ---- process: FT -> TI -> AR -> SG, then solve/verify (solver already ran in the interpreter) ----
+  process(input,settings={precedence:'standard'},gen=generateCandidates){
+    const G0=gen(input,settings),E=this.effAll(),c=this.cfg,rec={t:this.t,input,settings,gen:G0,eff:E,stages:{},narrator:this.narrator()};
+    if(G0.kind==='error'){rec.status='error';rec.message=G0.error;rec.stages.FT={note:'Input rejected before candidates could form: '+G0.error};this.records.push(rec);return rec;}
+    const C=G0.candidates.map(x=>({...x}));
+    // FT: admit candidates with plausibility >= 0.6·FT·max(p); invalid candidates never admitted
+    const valid=C.filter(x=>!x.error),maxp=Math.max(...valid.map(x=>x.p),1e-9),thr=0.6*E.FT*maxp;
+    for(const x of C){x.admitted=!x.error&&x.p>=thr;x.ftReason=x.error?'invalid: '+x.error:(x.admitted?'p='+x.p+' ≥ '+thr.toFixed(3):'p='+x.p+' < '+thr.toFixed(3));}
+    rec.stages.FT={threshold:thr,admitted:C.filter(x=>x.admitted).map(x=>x.id),rejected:C.filter(x=>!x.admitted).map(x=>x.id)};
+    let adm=C.filter(x=>x.admitted);if(!adm.length){adm=[valid.sort((a,b)=>b.p-a.p)[0]];adm[0].admitted=true;adm[0].ftReason+=' (kept: FT rejected everything)';}
+    // TI: integrate earlier outcomes for this context. Convention: lower TI = shorter window = faster response.
+    const lambda=0.3+0.65*E.TI,mem=this.memRead(G0.ctx,lambda);
+    rec.stages.TI={lambda,window:1/(1-lambda),memory:mem,ctx:G0.ctx};
+    // AR: score = ln p + integrated evidence; commit only if the margin is clear; never invent certainty
+    for(const x of adm){x.mem=mem[x.id]||0;x.score=Math.log(x.p)+x.mem;}
+    adm.sort((a,b)=>b.score-a.score);
+    const margin=c.arMargin*(0.5+this.slots[0].theta);
+    const gap=adm.length>1?adm[0].score-adm[1].score:Infinity;
+    let status='answer';
+    if(adm.length>1&&gap<margin)status='ambiguous';
+    // Forced-choice tasks (e.g. predicting a prime's last digit) have no one to ask: AR still reports
+    // that the evidence does not decide (rec.weak), but commits to its best-scoring candidate.
+    if(status==='ambiguous'&&G0.forced){status='answer';rec.weak=true;}
+    rec.stages.AR={margin,gap,selected:status==='answer'?adm[0].id:null,alternatives:adm.map(x=>x.id),
+      why:rec.weak?'forced choice: best guess only — score gap '+gap.toFixed(3)+' < margin '+margin.toFixed(3)+', so the evidence does not decide':status==='answer'?(adm.length===1?'only one admitted interpretation':'score gap '+gap.toFixed(3)+' ≥ margin '+margin.toFixed(3)):'score gap '+(isFinite(gap)?gap.toFixed(3):'∞')+' < margin '+margin.toFixed(3)+' — interpretations disagree and the evidence does not decide'};
+    // SG: relevance weighting after AR. Confidence is reported, never used as proof of validity.
+    const gain=0.5+3*E.SG,mx=Math.max(...adm.map(x=>x.score));let z=0;for(const x of adm){x.conf=Math.exp(gain*(x.score-mx));z+=x.conf;}for(const x of adm)x.conf/=z;
+    rec.stages.SG={gain,writeWeight:0.5+E.SG};
+    rec.candidates=C;rec.status=status;
+    if(status==='answer'){const s=adm[0];rec.selected=s;rec.answer=s.answer;rec.verify=s.verify;rec.confidence=s.conf;
+      if(s.verify&&s.verify.status==='fail'){rec.status='verify-failed';}}
+    this.records.push(rec);return rec;
+  }
+
+  // ---- feedback: truth = {label?:candidate id, ambiguous?:true, error?:true}; reward from an observable outcome ----
+  feedback(rec,truth){
+    const c=this.cfg,E=rec.eff;let r;
+    if(truth.error)r=rec.status==='error'?1:0;
+    else if(truth.ambiguous)r=rec.status==='ambiguous'?1:0;
+    else if(rec.status==='ambiguous')r=0.5;
+    else r=rec.status==='answer'&&rec.selected&&rec.selected.id===truth.label?1:0;
+    rec.reward=r;this.rewardHist.push(r);
+    const C=rec.candidates||[],why=[];
+    const top=o=>{const e=Object.entries(o).sort((a,b)=>b[1]-a[1]);return e.length?e[0][0]:null;};
+    const cfS=rec.gen&&rec.gen.ctx?top(this.memRead(rec.gen.ctx,0.3)):null,cfL=rec.gen&&rec.gen.ctx?top(this.memRead(rec.gen.ctx,0.95)):null;
+    // --- memory write (weighted by SG) ---
+    if(truth.label&&rec.gen&&rec.gen.ctx){(this.memory[rec.gen.ctx]=this.memory[rec.gen.ctx]||[]).push({t:this.t,label:truth.label,w:rec.stages.SG.writeWeight});
+      if(rec.selected&&rec.selected.id!==truth.label)this.memory[rec.gen.ctx].push({t:this.t,label:rec.selected.id,w:-0.5*rec.stages.SG.writeWeight});
+      if(this.memory[rec.gen.ctx].length>60)this.memory[rec.gen.ctx].shift();}
+    // --- data channels (each parameter's own observation for this problem) ---
+    const T=C.find(x=>x.id===truth.label);
+    const ch={};
+    ch.FT=C.length?C.filter(x=>x.admitted===(x.id===truth.label)).length/C.length:(truth.error&&rec.status==='error'?1:0.5);
+    const mt=rec.stages.TI&&Object.keys(rec.stages.TI.memory).length?Object.entries(rec.stages.TI.memory).sort((a,b)=>b[1]-a[1])[0][0]:null;
+    ch.TI=mt?(mt===truth.label?1:0):0.5;
+    ch.SG=rec.status==='answer'?1-Math.abs((rec.confidence||0)-r):0.5;
+    // --- parameter adaptation (provisional rules; step = eta0·UE_eff) ---
+    const eta=c.eta0*E.UE,d={TI:0,SG:0,FT:0};
+    if(c.adapt&&T){
+      if(!T.admitted){d.FT=-eta;why.push('FT lowered: the intended interpretation "'+T.label+'" was filtered out');}
+      else if(rec.selected&&rec.selected.id!==T.id&&rec.selected.p<0.6*maxP(C)&&T.p>=0.6*maxP(C)){d.FT=+eta;why.push('FT raised: a higher threshold would have rejected the wrong pick and kept the right one');}
+      const ts=cfS,tl=cfL;   // short (λ=0.3) vs long (λ=0.95) window predictions, computed before this item was written
+      if(ts&&tl&&ts!==tl){if(ts===truth.label){d.TI=-eta;why.push('TI lowered: recent evidence was right while long-window evidence was wrong');}
+        else if(tl===truth.label){d.TI=+eta;why.push('TI raised: long-window evidence was right while recent evidence was wrong');}}
+      if(rec.status==='answer'){const tgt=r,cf=rec.confidence;d.SG=eta*(tgt-cf)*0.5;if(Math.abs(d.SG)>1e-4)why.push('SG '+(d.SG>0?'raised':'lowered')+': confidence '+cf.toFixed(2)+' vs outcome '+tgt);}
+    }
+    let moved=0;
+    for(const[k,j]of[['TI',0],['SG',1],['FT',3]]){const before=this.params[j].value;this.params[j].value=clamp(before+d[k],0.02,1);moved+=Math.abs(this.params[j].value-before);}
+    for(const p of this.params){p.history.push(p.value);if(p.history.length>500)p.history.shift();}
+    if(why.length)this.L('param',why.join('; '),d);
+    // --- slot strategies: each parameter's channel updates the slot it currently occupies ---
+    ch.UE=1-Math.min(1,moved/(c.eta0+1e-9));
+    for(const[k,j]of[['TI',0],['SG',1],['UE',2],['FT',3]]){const s=this.slots[this.slotOf(j)];s.theta+=c.alphaTheta*(ch[k]-s.theta);
+      this.params[j].channel.push(ch[k]);if(this.params[j].channel.length>200)this.params[j].channel.shift();}
+    for(const s of this.slots){s.thetaHistory.push(s.theta);if(s.thetaHistory.length>500)s.thetaHistory.shift();}
+    // --- Q_jk: utility of parameter j in slot k, from the observed reward ---
+    for(let k=0;k<4;k++){const j=this.occupant[k],s=this.slots[k];s.Q[j]+=c.alphaQ*(r-s.Q[j]);s.Qn[j]++;s.rewards.push(r);if(s.rewards.length>200)s.rewards.shift();}
+    // --- evaluate earlier switches (did reward improve over the next window?) ---
+    this.evalSwitches();
+    // --- reassignment ---
+    const sw=this.maybeSwitch(E.UE);
+    // --- UE feedback rule (PROVISIONAL): ΔUE = rho·UE·(kErr·(ē − eRef) − kCost·ι) ---
+    const u=c.ue;this.errEma=(1-u.emaErr)*this.errEma+u.emaErr*(1-r);
+    const iota=0.5*(sw?1:0)+0.5*Math.min(1,moved/(c.eta0+1e-9));
+    let dUE=0;if(u.enabled&&c.adapt){dUE=ueDelta(this.params[2].value,this.errEma,iota,u);
+      const b=this.params[2].value;this.params[2].value=clamp(b+dUE,0.02,1);dUE=this.params[2].value-b;
+      this.L('ue','UE '+(dUE>=0?'+':'')+dUE.toFixed(4)+' (ē='+this.errEma.toFixed(3)+', eRef='+u.eRef+', ι='+iota.toFixed(2)+')',{errEma:this.errEma,iota,dUE,UE:this.params[2].value,rho:u.rho,kErr:u.kErr,kCost:u.kCost,eRef:u.eRef,UEbefore:b});}
+    this.stats.adaptRate=0.9*this.stats.adaptRate+0.1*moved;this.stats.switchRate=0.9*this.stats.switchRate+0.1*(sw?1:0);
+    this.stats.adaptHist.push(moved);this.stats.switchHist.push(sw?1:0);this.stats.ueHist.push(this.params[2].value);
+    rec.update={reward:r,deltas:d,moved,switched:sw,dUE,channels:ch,why};
+    this.t++;return rec.update;
+  }
+  utility(occ){let u=0;for(let k=0;k<4;k++)u+=this.slots[k].Q[occ[k]];return u;}
+  maybeSwitch(ue){
+    const c=this.cfg;if(c.switchMode==='fixed')return null;
+    if(this.rand()>=c.kappa*ue)return null;     // attempt rate scales with UE
+    const opts=[{a:-1,b:-1,occ:this.occupant.slice()}];
+    for(let a=0;a<4;a++)for(let b=a+1;b<4;b++){const o=this.occupant.slice();[o[a],o[b]]=[o[b],o[a]];opts.push({a,b,occ:o});}
+    const u0=this.utility(this.occupant);let pick,why;
+    if(c.switchMode==='random'){pick=opts[1+Math.floor(this.rand()*6)];why='random transposition';}
+    else{const w=opts.map(o=>Math.exp((this.utility(o.occ)-u0)/c.tau)),z=w.reduce((a,b)=>a+b,0);let x=this.rand()*z;
+      pick=opts[opts.length-1];for(let i=0;i<opts.length;i++){x-=w[i];if(x<=0){pick=opts[i];break;}}
+      for(const o of opts)o.p=Math.exp((this.utility(o.occ)-u0)/c.tau)/z;
+      why='softmax over ΔU (τ='+c.tau+'); chosen ΔU='+(this.utility(pick.occ)-u0).toFixed(3)+', p='+pick.p.toFixed(2);}
+    if(pick.a<0){this.L('switch','Considered reassignment, kept current: '+why,{opts:opts.map(o=>({a:o.a,b:o.b,p:o.p}))});return null;}
+    const ja=this.occupant[pick.a],jb=this.occupant[pick.b],before=PARAMS.map((_,j)=>this.params[j].value);
+    this.occupant=pick.occ;
+    if(!this.cfg.stayOnSlot){const t=this.slots[pick.a].theta;this.slots[pick.a].theta=this.slots[pick.b].theta;this.slots[pick.b].theta=t;}
+    const msg=PARAMS[ja]+' (slot '+pick.a+' '+SIGNS[pick.a]+') ⇄ '+PARAMS[jb]+' (slot '+pick.b+' '+SIGNS[pick.b]+'): '+why+
+      (pick.a===0||pick.b===0?'. Narrator is now '+this.narrator():'');
+    const rb=this.rewardHist.slice(-c.evalWindow);
+    this.pendingSwitches.push({t:this.t,before:rb.length?rb.reduce((a,b)=>a+b,0)/rb.length:0,msg});
+    this.stats.switches++;this.L('switch',msg,{a:pick.a,b:pick.b,paramsBefore:before});
+    return{a:pick.a,b:pick.b,params:[PARAMS[ja],PARAMS[jb]],why};
+  }
+  evalSwitches(){const W=this.cfg.evalWindow;this.pendingSwitches=this.pendingSwitches.filter(p=>{
+    if(this.t-p.t<W)return true;const after=this.rewardHist.slice(-W).reduce((a,b)=>a+b,0)/W;const improved=after>p.before;
+    this.stats.evaluated++;if(!improved)this.stats.unnecessary++;
+    this.L('switch-eval','Switch at step '+p.t+' '+(improved?'improved':'did not improve')+' reward ('+p.before.toFixed(2)+' → '+after.toFixed(2)+')',{improved});return false;});}
+  // test hook: force a transposition (used by acceptance tests)
+  forceSwap(a,b){const o=this.occupant;[o[a],o[b]]=[o[b],o[a]];if(!this.cfg.stayOnSlot){const t=this.slots[a].theta;this.slots[a].theta=this.slots[b].theta;this.slots[b].theta=t;}}
+}
+function maxP(C){return Math.max(...C.filter(x=>!x.error).map(x=>x.p),1e-9);}
+
+G.RPCS={ueDelta,PARAMS,SIGNS,DEFAULTS,Receiver,generateCandidates,rng};
+})(typeof globalThis!=='undefined'?globalThis:window);
+
+</script>
+<script>
+// ===== Module 4: Test suite — problem bank, conventional baseline, experiments A–D(+E), acceptance tests =====
+(function(G){
+'use strict';
+const M=G.MathEngine,R=G.RPCS;
+const STD={precedence:'standard'};
+// Fixed bank with independently written expected outcomes.
+const BANK=[
+ {q:'2 + 3 × 4',expect:'14'},{q:'1/3 + 1/6',expect:'1/2'},{q:'(2+3)^2',expect:'25'},{q:'2^3^2',expect:'512'},
+ {q:'7/2 - 1/4',expect:'13/4'},{q:'-3^2',expect:'-9'},{q:'0.5 × 6',expect:'3'},{q:'what is seven divided by two',expect:'7/2'},
+ {q:'the sum of 3 and 4 times 2',expect:'14'},
+ {q:'2x + 3 = 11',expect:'x = 4'},{q:'3(x-1) = 2x + 5',expect:'x = 8'},{q:'x/2 + 1/3 = 1',expect:'x = 4/3'},
+ {q:'5 = 5',expect:'true for every value'},{q:'x + 1 = x + 2',expect:'no solution'},
+ {q:'2x + 3x - x',expect:'4x'},{q:'(x+1)^2 - x^2',expect:'2x + 1'},
+ {q:'2 + * 3',error:true},{q:'1/0',error:true},{q:'(2+3',error:true},{q:'2x + 3y',error:true},
+ {q:'8 ÷ 2(2+2)',ambiguous:true},{q:'6 ÷ 2(1+2)',ambiguous:true},{q:'what is two plus three times four',ambiguous:true},
+ {q:'2 + 3 × 4',settings:{precedence:'compare'},ambiguous:true},{q:'10 - 4 ÷ 2',settings:{precedence:'disabled'},ambiguous:true},
+];
+// Operation-selection stream: the intended operation depends on a context tag the receiver must learn.
+function opItem(rand,domain,map){
+  const a=2+Math.floor(rand()*8),b=2+Math.floor(rand()*8),truth=map[domain];const u=rand();
+  let phrase;
+  if(u<0.6)phrase='combine '+a+' and '+b;
+  else{const cueFor=u<0.85?truth:(truth==='add'?'mul':'add');      // 25% consistent cue, 15% misleading cue
+    phrase=cueFor==='add'?a+' apples and '+b+' more in total':a+' bags and '+b+' each';}
+  return{q:'['+domain+'] '+phrase,op:truth,domain,isOp:true};
+}
+function buildStream(seed,n=200,flipAt=120){
+  const rand=R.rng(seed*7919+13),out=[];let map={shop:'add',grid:'mul'};
+  while(out.length<n){const block=[...BANK.map(b=>({...b}))];for(let i=0;i<24;i++)block.push({opSlot:true});
+    for(let i=block.length-1;i>0;i--){const j=Math.floor(rand()*(i+1));[block[i],block[j]]=[block[j],block[i]];}
+    for(const it of block){if(out.length>=n)break;if(out.length===flipAt)map={shop:'mul',grid:'add'};
+      out.push(it.opSlot?{...opItem(rand,rand()<0.5?'shop':'grid',map),afterFlip:out.length>=flipAt}:{...it,afterFlip:out.length>=flipAt});}}
+  return out;
+}
+// Truth for receiver feedback, derived from the item's independent expectation.
+function truthFor(rec,it){
+  if(it.error)return{error:true};if(it.ambiguous)return{ambiguous:true};
+  if(it.isOp)return{label:it.op};
+  const c=(rec.candidates||[]).find(x=>x.answer===it.expect);return c?{label:c.id}:{};
+}
+function judge(status,answer,selId,it){
+  if(it.error)return status==='error';if(it.ambiguous)return status==='ambiguous';
+  if(it.isOp)return status==='answer'&&selId===it.op;
+  return status==='answer'&&answer===it.expect;
+}
+// A: conventional solver, no receiver-guided selection, standard precedence always
+function conventional(it){
+  let nl;try{nl=M.translateNL(it.q);}catch(e){return{status:'error'};}
+  if(nl&&nl.kind==='opselect'){const g=R.generateCandidates(it.q);const best=g.candidates.filter(c=>!c.error).sort((a,b)=>b.p-a.p||(a.id==='add'?-1:1))[0];return{status:'answer',answer:best.answer,sel:best.id};}
+  try{const r=M.solve(nl?nl.text:it.q,{prec:'standard',implicit:'same'});return{status:r.verify.status==='fail'?'verify-failed':'answer',answer:r.answer};}catch(e){return{status:'error'};}
+}
+const CONFIGS={
+  A:{label:'A · conventional solver',conventional:true},
+  B:{label:'B · receiver, fixed settings + fixed slots',cfg:{adapt:false,switchMode:'fixed'}},
+  C:{label:'C · adaptive + random switching',cfg:{adapt:true,switchMode:'random'}},
+  D:{label:'D · full model (adaptive, slot-persistent, strategy-guided)',cfg:{adapt:true,switchMode:'strategy',stayOnSlot:true}},
+  E:{label:'E · ablation: D with strategies following the parameter',cfg:{adapt:true,switchMode:'strategy',stayOnSlot:false}},
+};
+function runOne(key,seed,stream){
+  const C=CONFIGS[key];const res=[];let rc=null;
+  if(!C.conventional)rc=new R.Receiver({...C.cfg,seed});
+  for(const it of stream){
+    let ok;
+    if(C.conventional){const o=conventional(it);ok=judge(o.status,o.answer,o.sel,it);}
+    else{const rec=rc.process(it.q,it.settings||STD);ok=judge(rec.status,rec.answer,rec.selected&&rec.selected.id,it);rc.feedback(rec,truthFor(rec,it));}
+    res.push(ok);}
+  const pick=f=>{const v=stream.map((it,i)=>[it,res[i]]).filter(([it])=>f(it));return v.length?v.filter(x=>x[1]).length/v.length:null;};
+  // recovery: op items after the flip until 4 consecutive correct
+  let run=0,rec=null,cnt=0;stream.forEach((it,i)=>{if(rec!==null||!it.isOp||!it.afterFlip)return;cnt++;run=res[i]?run+1:0;if(run>=4)rec=cnt;});
+  const blocks=[0,1,2,3].map(b=>{const s=res.slice(b*50,b*50+50);return s.filter(Boolean).length/s.length;});
+  return{exact:pick(it=>it.expect!==undefined),interpAmbig:pick(it=>it.ambiguous),interpOp:pick(it=>it.isOp),
+    opBeforeFlip:pick(it=>it.isOp&&!it.afterFlip),opAfterFlip:pick(it=>it.isOp&&it.afterFlip),errDetect:pick(it=>it.error),
+    overall:res.filter(Boolean).length/res.length,blocks,recovery:rec,
+    switches:rc?rc.stats.switches:0,unnecessary:rc?rc.stats.unnecessary:0,evaluated:rc?rc.stats.evaluated:0,
+    finalParams:rc?Object.fromEntries(rc.params.map(p=>[p.id,+p.value.toFixed(3)])):null};
+}
+function runExperiments(seeds=[1,2,3,4,5,6,7,8,9,10]){
+  const out={generated:new Date().toISOString(),seeds,streamLength:200,flipAt:120,configs:{}};
+  for(const k of Object.keys(CONFIGS)){const runs=seeds.map(s=>runOne(k,s,buildStream(s)));
+    const agg=f=>{const v=runs.map(f).filter(x=>x!==null&&x!==undefined);if(!v.length)return null;const m=v.reduce((a,b)=>a+b,0)/v.length;const sd=Math.sqrt(v.reduce((a,b)=>a+(b-m)**2,0)/Math.max(1,v.length-1));return{mean:+m.toFixed(4),sd:+sd.toFixed(4),n:v.length};};
+    out.configs[k]={label:CONFIGS[k].label,
+      exact:agg(r=>r.exact),interpAmbig:agg(r=>r.interpAmbig),interpOp:agg(r=>r.interpOp),opBeforeFlip:agg(r=>r.opBeforeFlip),opAfterFlip:agg(r=>r.opAfterFlip),
+      errDetect:agg(r=>r.errDetect),overall:agg(r=>r.overall),recovery:agg(r=>r.recovery),recovered:runs.filter(r=>r.recovery!==null).length+'/'+runs.length,
+      switches:agg(r=>r.switches),unnecessary:agg(r=>r.unnecessary),
+      blocks:[0,1,2,3].map(b=>agg(r=>r.blocks[b])),finalParams:runs.map(r=>r.finalParams)};}
+  return out;
+}
+
+// ---------------- Acceptance tests ----------------
+function acceptance(){
+  const T=[],add=(id,name,pass,detail)=>T.push({id,name,pass:!!pass,detail});
+  const isPerm=r=>[0,1,2,3].every(j=>r.occupant.filter(x=>x===j).length===1)&&r.occupant.length===4;
+  // 1–2: permutation invariant across a long run with switching
+  {const r=new R.Receiver({seed:5,kappa:1,switchMode:'random'});const s=buildStream(5);let okA=true,okB=true;
+    for(const it of s){const rec=r.process(it.q,it.settings||STD);r.feedback(rec,truthFor(rec,it));
+      okA=okA&&[0,1,2,3].every(j=>r.occupant.filter(x=>x===j).length===1);okB=okB&&r.occupant.length===4&&new Set(r.occupant).size===4;}
+    add(1,'Every parameter occupies exactly one slot',okA,'Checked after each of '+s.length+' problems; '+r.stats.switches+' switches occurred');
+    add(2,'Every slot contains exactly one parameter',okB,'Checked after each of '+s.length+' problems');}
+  // 3: switch preserves numerical setting and history
+  {const r=new R.Receiver({seed:2});const s=buildStream(2).slice(0,30);for(const it of s){const rec=r.process(it.q,it.settings||STD);r.feedback(rec,truthFor(rec,it));}
+    const snap=JSON.stringify(r.params.map(p=>({v:p.value,h:p.history,c:p.channel})));const a=r.occupant[0],b=r.occupant[2];r.forceSwap(0,2);
+    add(3,'A switch preserves the parameter’s setting and history',snap===JSON.stringify(r.params.map(p=>({v:p.value,h:p.history,c:p.channel})))&&r.occupant[0]===b&&r.occupant[2]===a,
+      'Swapped '+R.PARAMS[a]+'⇄'+R.PARAMS[b]+'; values, histories and channels identical before/after');}
+  // 4: slot persistence keeps strategies on slots
+  {const r=new R.Receiver({seed:2,stayOnSlot:true});r.slots.forEach((s,k)=>s.theta=0.1+0.2*k);const th=r.slots.map(s=>s.theta);r.forceSwap(0,3);
+    const r2=new R.Receiver({seed:2,stayOnSlot:false});r2.slots.forEach((s,k)=>s.theta=0.1+0.2*k);r2.forceSwap(0,3);
+    add(4,'With slot persistence on, a switch leaves strategies on their slots',JSON.stringify(th)===JSON.stringify(r.slots.map(s=>s.theta))&&r2.slots[0].theta!==th[0],
+      'Θ before '+th.map(x=>x.toFixed(1))+', after '+r.slots.map(s=>s.theta.toFixed(1))+' (ablation moves Θ: slot 0 now '+r2.slots[0].theta.toFixed(1)+')');}
+  // 5: narrator follows + occupant
+  {const r=new R.Receiver({seed:9});const n0=r.narrator();r.forceSwap(0,1);const n1=r.narrator();
+    add(5,'The narrator changes when the + slot occupant changes',n0!==n1&&n1===R.PARAMS[r.occupant[0]],'Narrator '+n0+' → '+n1);}
+  // 6–7: UE monotonically controls both rates (UE rule frozen, everything else identical)
+  {const rates=ue=>{let ad=[],sw=0,n=0;for(const seed of[1,2,3,4,5,6]){const r=new R.Receiver({seed,ue:{enabled:false}});r.params[2].value=ue;
+      for(const it of buildStream(seed)){const rec=r.process(it.q,it.settings||STD);const u=r.feedback(rec,truthFor(rec,it));
+        for(const k of['TI','SG','FT'])if(u.deltas[k]!==0)ad.push(Math.abs(u.deltas[k]));if(u.switched)sw++;n++;}}
+      return{adapt:ad.reduce((a,b)=>a+b,0)/Math.max(1,ad.length),switch:sw/n};};
+    const hi=rates(0.9),mid=rates(0.6),lo=rates(0.3);
+    add(6,'Increasing UE increases adaptation and switching rates',hi.adapt>mid.adapt&&hi.switch>mid.switch,
+      'UE 0.6 → 0.9: step size per adaptation '+mid.adapt.toFixed(4)+' → '+hi.adapt.toFixed(4)+'; switches per problem '+mid.switch.toFixed(3)+' → '+hi.switch.toFixed(3));
+    add(7,'Decreasing UE reduces both rates',lo.adapt<mid.adapt&&lo.switch<mid.switch,
+      'UE 0.6 → 0.3: step size '+mid.adapt.toFixed(4)+' → '+lo.adapt.toFixed(4)+'; switches per problem '+mid.switch.toFixed(3)+' → '+lo.switch.toFixed(3));}
+  // 8: UE changes only by the documented rule (replay every logged update)
+  {const r=new R.Receiver({seed:4});let maxErr=0,untracked=0,prev=r.params[2].value;
+    for(const it of buildStream(4)){const rec=r.process(it.q,it.settings||STD);r.feedback(rec,truthFor(rec,it));
+      const L=r.log.filter(l=>l.type==='ue'&&l.t===r.t-1).pop();const now=r.params[2].value;
+      if(L){const d=L.data,want=Math.min(1,Math.max(0.02,d.UEbefore+R.ueDelta(d.UEbefore,d.errEma,d.iota,{rho:d.rho,kErr:d.kErr,kCost:d.kCost,eRef:d.eRef})));maxErr=Math.max(maxErr,Math.abs(want-now),Math.abs(d.UEbefore-prev));}
+      else if(now!==prev)untracked++;prev=now;}
+    add(8,'UE changes only through the documented feedback rule',maxErr<1e-12&&untracked===0,'Replayed 200 logged updates from their recorded inputs; max discrepancy '+maxErr.toExponential(1)+', untracked changes '+untracked);}
+  // 9: slot strategy (Q) influences reassignment
+  {const freq=mode=>{const r=new R.Receiver({seed:11,kappa:1,switchMode:mode,tau:0.08});r.params[2].value=1;r.slots.forEach(s=>s.theta=0.5);
+      const occ0=r.occupant.slice();r.slots[0].Q[occ0[1]]=1;r.slots[1].Q[occ0[0]]=1;  // slots 0 and 1 have learned the other parameter does well there
+      let hit=0,N=2000;for(let i=0;i<N;i++){r.occupant=occ0.slice();const s=r.maybeSwitch(1);if(s&&((s.a===0&&s.b===1)))hit++;}return hit/N;};
+    const fs=freq('strategy'),fr=freq('random');
+    add(9,'A slot’s learned strategy measurably changes assignment decisions',fs>0.5&&fr<0.25,'Swap favored by slot Q-values chosen '+(fs*100).toFixed(1)+'% of attempts (strategy) vs '+(fr*100).toFixed(1)+'% (random)');}
+  // 10: core problems
+  {const r=new R.Receiver({seed:1});const got=['2 + 3 × 4','1/3 + 1/6','2x + 3 = 11'].map(q=>{const x=r.process(q,STD);return[x.answer,x.verify&&x.verify.status];});
+    add(10,'Solves 2 + 3 × 4, 1/3 + 1/6, 2x + 3 = 11',got[0][0]==='14'&&got[1][0]==='1/2'&&got[2][0]==='x = 4'&&got.every(g=>g[1]==='pass'),got.map(g=>g[0]+' ('+g[1]+')').join(', '));}
+  // 11: ambiguity detection when precedence is disabled or a competing convention is requested
+  {const r=new R.Receiver({seed:1});const a=r.process('2 + 3 × 4',{precedence:'disabled'}),b=r.process('2 + 3 × 4',{precedence:'compare'}),c=r.process('2 + 3 × 4',STD);
+    add(11,'Flags 2 + 3 × 4 as ambiguous without standard precedence',a.status==='ambiguous'&&b.status==='ambiguous'&&c.status==='answer',
+      'disabled → '+a.status+' ('+a.candidates.map(x=>x.answer).join(' vs ')+'); compare → '+b.status+'; standard → '+c.status+' '+c.answer);}
+  // 12: failed verification is reported
+  {const r=new R.Receiver({seed:1});const faulty=q=>{const g=R.generateCandidates(q);for(const c of g.candidates){const f=M.solve(g.text,{prec:'standard',implicit:'same'},{fault:true});c.answer=f.answer;c.verify=f.verify;}return g;};
+    const x=r.process('2 + 3 × 4',STD,faulty);
+    add(12,'A failed verification is reported, not accepted',x.status==='verify-failed'&&x.verify.status==='fail','Injected fault: answer '+x.answer+' → status "'+x.status+'"; '+x.verify.detail);}
+  return T;
+}
+G.Suite={BANK,buildStream,runExperiments,acceptance,CONFIGS,conventional,truthFor,judge};
+})(typeof globalThis!=='undefined'?globalThis:window);
+
+</script>
+<script>
+// ===== Module 7: Gaussian square view — z = m + n·i, everything about z² in one place =====
+// Exact construction: one reading only (i is the imaginary unit), so the receiver is not involved.
+(function(G){
+'use strict';
+const MAX=1e7,B=BigInt;
+function modpow(b,e,m){let r=1n;b%=m;while(e>0n){if(e&1n)r=r*b%m;b=b*b%m;e>>=1n;}return r;}
+function gcd(a,b){a=Math.abs(a);b=Math.abs(b);while(b){[a,b]=[b,a%b];}return a;}
+function factor(N){const f=[];let n=N;
+  for(const p of[2,3]){let e=0;while(n%p===0){n/=p;e++;}if(e)f.push([p,e]);}
+  for(let p=5,s=2;p*p<=n;p+=s,s=6-s){if(n%p===0){let e=0;while(n%p===0){n/=p;e++;}f.push([p,e]);}}
+  if(n>1)f.push([n,1]);return f;}
+// r with r² ≡ −1 (mod p), p ≡ 1 (mod 4): pick a non-residue c, r = c^((p−1)/4)
+function sqrtMinus1(p){const P=B(p);for(let c=2n;;c++){if(modpow(c,(P-1n)/2n,P)===P-1n){const r=modpow(c,(P-1n)/4n,P);return Number(r<P-r?r:P-r);}}}
+// p = x² + y² via the Hermite–Serret / Cornacchia Euclid step on (p, r)
+function twoSquares(p,r){let a=p,b=r;const lim=Math.sqrt(p);while(b>lim){[a,b]=[b,a%b];}const x=b,y=Math.round(Math.sqrt(p-x*x));return x>=y?[x,y]:[y,x];}
+
+function lit(t){
+  t=t.replace(/^\((.*)\)$/,'$1');
+  if(/^[+-]?\d+$/.test(t))return{m:+t,n:1,note:'Read '+t+' as '+t+' + i.'};
+  let k=t.match(/^([+-]?\d+)([+-])(\d*)i$/);if(k)return{m:+k[1],n:(k[2]==='-'?-1:1)*(k[3]===''?1:+k[3])};
+  k=t.match(/^([+-]?)(\d*)i(?:([+-])(\d+))?$/);if(k)return{m:k[3]?(k[3]==='-'?-1:1)*+k[4]:0,n:(k[1]==='-'?-1:1)*(k[2]===''?1:+k[2])};
+  return null;}
+// Recognised inputs: "(a+bi)^2", "square of a+bi", "gauss a+bi", "square of 7" (= 7 + i)
+function parse(src){
+  const s=String(src).toLowerCase().replace(/[−–—]/g,'-').replace(/\*\*/g,'^').replace(/\s+/g,'');
+  let k=s.match(/^\(([^()]*i[^()]*)\)\^2$/),body=null;
+  if(k)body=k[1];else if((k=s.match(/^(?:squareof|square|gaussian|gauss)(.+)$/)))body=k[1];
+  if(body===null)return null;
+  const z=lit(body);
+  if(!z)return{error:'Could not read "'+body+'" as a Gaussian integer. Use a form like 2+i, 3+2i, 3-2i or 5i.'};
+  if(Math.abs(z.m)>MAX||Math.abs(z.n)>MAX)return{error:'Keep both parts within ±10,000,000 so the factoring stays exact and fast.'};
+  if(z.m===0&&z.n===0)return{error:'z = 0 has no triangle.'};
+  return z;}
+
+function compute(z){
+  const{m,n}=z,X=m*m-n*n,Y=2*m*n,N=m*m+n*n;
+  const pyth=B(X)**2n+B(Y)**2n===B(N)**2n;
+  const g=gcd(m,n),degenerate=X===0||Y===0;
+  const primitive=!degenerate&&g===1&&Math.abs(m-n)%2===1;
+  let whyNot='';if(degenerate)whyNot=Y===0?'one part of z is 0, so the triangle is flat':'|m| = |n|, so the real leg is 0';
+  else if(g>1)whyNot='m and n share the factor '+g+', so every side is divisible by '+(g*g);
+  else if(!primitive)whyNot='m and n are both odd, so every side is even';
+  const cosA=X/N,angle=Math.acos(Math.max(-1,Math.min(1,cosA)))*180/Math.PI;
+  const fac=factor(N).map(([p,e])=>{
+    if(p===2)return{p,e,type:'ramified'};
+    if(p%4===3)return{p,e,type:'inert',evenOk:e%2===0};
+    const r=sqrtMinus1(p),[x,y]=twoSquares(p,r);
+    const res={p,e,type:'split',r,rp:p-r,x,y};
+    if(Math.abs(n)===1){const am=((m%p)+p)%p;res.am=am;res.amOk=am===r||am===p-r;}
+    return res;});
+  const isPrimeN=fac.length===1&&fac[0].e===1;
+  return{m,n,X,Y,N,pyth,g,degenerate,primitive,whyNot,cosA,angle,fac,isPrimeN,
+    proj:{hyperbolic:X,conjSum:2*m,conjProd:N},sumMatches:2*m===Y};
+}
+function fmtC(a,b){if(b===0)return String(a);const bi=(Math.abs(b)===1?'':Math.abs(b))+'i';if(a===0)return(b<0?'−':'')+bi;return a+(b<0?' − ':' + ')+bi;}
+
+// --- drawings (inline SVG, colors from theme tokens) ---
+function triSVG(c){
+  const W=300,H=220,pad=36,X=c.X,Y=c.Y;
+  const minx=Math.min(0,X),maxx=Math.max(0,X),miny=Math.min(0,Y),maxy=Math.max(0,Y);
+  const s=Math.min((W-2*pad)/((maxx-minx)||1),(H-2*pad)/((maxy-miny)||1));
+  const ox=pad+((W-2*pad)-(maxx-minx)*s)/2,oy=pad+((H-2*pad)-(maxy-miny)*s)/2;
+  const tx=x=>ox+(x-minx)*s,ty=y=>H-oy-(y-miny)*s;
+  const O=[tx(0),ty(0)],A=[tx(X),ty(0)],P=[tx(X),ty(Y)];
+  const sq=10,dx=X>=0?-sq:sq,dy=Y>=0?-sq:sq;
+  const mid=(a,b)=>[(a[0]+b[0])/2,(a[1]+b[1])/2];const mOA=mid(O,A),mAP=mid(A,P),mOP=mid(O,P);
+  const t=(x,y,str,col,anc='middle')=>'<text x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" text-anchor="'+anc+'" style="fill:var('+col+');font:500 13px var(--mono)">'+str+'</text>';
+  return'<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Right triangle with legs '+Math.abs(X)+' and '+Math.abs(Y)+' and hypotenuse '+c.N+'">'+
+    '<polygon points="'+[O,A,P].map(p=>p.map(v=>v.toFixed(1)).join(',')).join(' ')+'" style="fill:var(--soft);stroke:none"/>'+
+    (c.degenerate?'':'<path d="M'+(A[0]+dx).toFixed(1)+','+A[1].toFixed(1)+' L'+(A[0]+dx).toFixed(1)+','+(A[1]+dy).toFixed(1)+' L'+A[0].toFixed(1)+','+(A[1]+dy).toFixed(1)+'" style="fill:none;stroke:var(--muted);stroke-width:1"/>')+
+    '<line x1="'+O[0]+'" y1="'+O[1]+'" x2="'+A[0]+'" y2="'+A[1]+'" style="stroke:var(--ft);stroke-width:3"/>'+
+    '<line x1="'+A[0]+'" y1="'+A[1]+'" x2="'+P[0]+'" y2="'+P[1]+'" style="stroke:var(--sg);stroke-width:3"/>'+
+    '<line x1="'+O[0]+'" y1="'+O[1]+'" x2="'+P[0]+'" y2="'+P[1]+'" style="stroke:var(--ue);stroke-width:3"/>'+
+    '<circle cx="'+O[0]+'" cy="'+O[1]+'" r="3" style="fill:var(--fg)"/>'+
+    t(mOA[0],mOA[1]+(Y>=0?18:-8),'Re '+X,'--ft')+
+    t(mAP[0]+(X>=0?8:-8),mAP[1]+4,'Im '+Y,'--sg',X>=0?'start':'end')+
+    t(mOP[0]+(X>=0?-8:8),mOP[1]+(Y>=0?-6:14),'|z²| '+c.N,'--ue',X>=0?'end':'start')+
+  '</svg>';}
+function mirrorSVG(c){
+  const W=300,H=220,cx=W/2,cy=H/2,r=Math.sqrt(c.N),s=80/r,m=c.m,n=c.n;
+  const Z=[cx+m*s,cy-n*s],Zb=[cx+m*s,cy+n*s];
+  const th=Math.atan2(n,m),R=26;
+  const a1=[cx+R*Math.cos(-th),cy+R*Math.sin(-th)],a2=[cx+R*Math.cos(th),cy+R*Math.sin(th)];
+  const large=Math.abs(2*th)>Math.PI?1:0,sweep=n>0?0:1;
+  const arrow=(p,col,id)=>'<line x1="'+cx+'" y1="'+cy+'" x2="'+p[0].toFixed(1)+'" y2="'+p[1].toFixed(1)+'" style="stroke:var('+col+');stroke-width:2.5" marker-end="url(#'+id+')"/>';
+  const lab=(p,str,col)=>'<text x="'+(p[0]+(m>=0?8:-8)).toFixed(1)+'" y="'+(p[1]+4).toFixed(1)+'" text-anchor="'+(m>=0?'start':'end')+'" style="fill:var('+col+');font:500 13px var(--mono)">'+str+'</text>';
+  return'<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="z and its mirror image across the real axis, angle '+c.angle.toFixed(2)+' degrees">'+
+    '<defs><marker id="ah1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" style="fill:var(--ti)"/></marker>'+
+    '<marker id="ah2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" style="fill:var(--sg)"/></marker></defs>'+
+    '<line x1="12" y1="'+cy+'" x2="'+(W-12)+'" y2="'+cy+'" style="stroke:var(--line);stroke-width:1"/>'+
+    '<line x1="'+cx+'" y1="12" x2="'+cx+'" y2="'+(H-12)+'" style="stroke:var(--line);stroke-width:1"/>'+
+    '<text x="'+(W-14)+'" y="'+(cy-6)+'" text-anchor="end" style="fill:var(--muted);font:11px var(--mono)">real</text>'+
+    (n!==0?'<path d="M'+a2[0].toFixed(1)+','+a2[1].toFixed(1)+' A'+R+','+R+' 0 '+large+' '+sweep+' '+a1[0].toFixed(1)+','+a1[1].toFixed(1)+'" style="fill:none;stroke:var(--muted);stroke-width:1.2"/>':'')+
+    arrow(Z,'--ti','ah1')+arrow(Zb,'--sg','ah2')+lab(Z,'z = '+fmtC(m,n),'--ti')+lab(Zb,'z̄ = '+fmtC(m,-n),'--sg')+
+    '<text x="'+(cx+(m>=0?-R-6:R+6))+'" y="'+(cy+4)+'" text-anchor="'+(m>=0?'end':'start')+'" style="fill:var(--fg);font:500 12px var(--mono)">'+c.angle.toFixed(2)+'°</text>'+
+  '</svg>';}
+G.Gauss={parse,compute,fmtC,triSVG,mirrorSVG,factor,sqrtMinus1,twoSquares};
+})(typeof globalThis!=='undefined'?globalThis:window);
+
+</script>
+<script>
+// ===== Module 5: UI — renders state; holds no model logic =====
+(function(){
+'use strict';
+const M=MathEngine,R=RPCS,S=Suite,$=id=>document.getElementById(id);
+const PC={TI:'--ti',SG:'--sg',UE:'--ue',FT:'--ft'};
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let rx,stream,cursor=0,current=null,expResults=null;
+const EX=['can you bear it','is it a bear market','what does bat mean','(2+i)^2','(3+2i)^2','square of 12+i','2 + 3 × 4','1/3 + 1/6','2x + 3 = 11','8 ÷ 2(2+2)','(x+1)^2 - x^2','what is two plus three times four','[shop] combine 3 and 4','[grid] combine 3 and 4','2 + * 3'];
+$('examples').innerHTML=EX.map(e=>'<button class="chip">'+esc(e)+'</button>').join('');
+$('examples').addEventListener('click',e=>{if(e.target.tagName==='BUTTON'){$('q').value=e.target.textContent;solve();}});
+
+function reset(){
+  rx=new R.Receiver({seed:+$('seed').value||1,switchMode:$('swm').value,stayOnSlot:$('stay').checked,adapt:$('adapt').checked,signRule:$('sign').value});
+  stream=S.buildStream(+$('seed').value||1);cursor=0;current=null;$('result').innerHTML='<p class="note" style="margin:0">Enter a problem and press Solve, or run items from the built-in suite.</p>';$('pipe').innerHTML='Solve a problem to see each stage.';render();
+}
+function solve(){const q=$('q').value;if(!q.trim())return;const gq=Gauss.parse(q);
+  if(gq&&!(gq.error&&isWords(q))){showGauss(gq);return;}
+  const G=R.generateCandidates(q,{precedence:$('prec').value});
+  if(G.kind==='error'&&isWords(q)){askAny(q);return;}
+  if(ctl)ctl.abort();
+  const rec=rx.process(q,{precedence:$('prec').value});current={rec,item:null};showResult();render();}
+
+// ---- Any question: Claude proposes readings, the receiver chooses or holds them open, Claude answers the chosen reading ----
+function isWords(q){return /[a-z]{3,}/i.test(q.replace(/\[[^\]]*\]/g,'').replace(/\b(square|of|gauss|gaussian|root|sqrt)\b/gi,''));}
+let sampleP=null;try{sampleP=(window.claude&&typeof claude.use==='function')?claude.use('sample'):null;}catch(e){sampleP=null;}
+let ctl=null;const convo=[];
+const PIN_KEY='rc_pinned_context_v1',SAVE_KEY='rc_receiver_state_v1';
+try{$('pin').value=localStorage.getItem(PIN_KEY)||'';}catch(e){}
+$('pin').addEventListener('input',()=>{try{localStorage.setItem(PIN_KEY,$('pin').value);}catch(e){}});
+const pinned=()=>($('pin').value||'').trim().slice(0,6000);
+const recent=()=>convo.length?'Recent exchanges in this session (oldest first):\n'+convo.map(c=>'Q: '+c.q+'\nTaken as: '+c.reading+'\nA: '+c.a).join('\n\n')+'\n':'';
+const slug=s=>String(s||'').toLowerCase().replace(/[^a-z0-9:]+/g,'-').replace(/^-+|-+$/g,'').slice(0,40);
+function errCopy(code){return({not_granted:'Asking Claude is not allowed in this view, so only math works here.',sampling_disabled:'Claude is not available for this account, so only math works here.',
+  not_declared:'This page can no longer ask Claude, so only math works here.',capability_disabled:'Asking Claude is not available in this view.',rate_limited:'Too many questions at once. Try again in a little while.',
+  session_expired:'Please sign in to Claude again.',refused:'Claude declined this question.',invalid_json:'Could not read the list of readings. Press Go to try again.',
+  empty_completion:'Claude returned nothing. Try rewording it.',prompt_too_large:'The pinned context is too long. Shorten it and try again.'})[code]||'Something went wrong reaching Claude. Press Go to try again.';}
+function interpretPrompt(q){const p=pinned();return 'You are the interpretation stage of a receiver. Do NOT answer the question.\n'+
+  'List the distinct things this input could reasonably mean (its readings). Use 1 reading when the meaning is clear; never more than 4.\n'+
+  'Ambiguity can come from a word with two senses (bear/bare, bear/bull), an unclear reference, unclear scope, or unclear intent. Do not invent far-fetched readings.\n'+
+  (p?'Pinned context about the person asking (use it to judge which readings are plausible):\n'+p+'\n\n':'')+recent()+
+  'Input: <<'+q+'>>\n\nReply with only JSON of this shape:\n'+
+  '{"ctx": "short stable lowercase key for what is ambiguous, e.g. word:bear or ref:it; \\"none\\" when clear",\n'+
+  ' "note": "one sentence on what makes it ambiguous, or empty",\n'+
+  ' "readings": [{"key": "1-3 word lowercase slug naming this sense (the same sense must always get the same slug)", "reading": "the question restated under this reading", "p": 0.0}]}\n'+
+  'The p values are your probabilities for the readings and sum to 1.';}
+function answerPrompt(q,reading){const p=pinned();return 'Answer the question below, taking it in exactly this sense: "'+reading+'".\n'+
+  (p?'Pinned context about the person asking:\n'+p+'\n\n':'')+recent()+
+  'Question as typed: <<'+q+'>>\n\nWrite plain text with no markdown headings or tables. Lead with the direct answer, then at most a few short sentences. If you are not sure of a fact, say so plainly.';}
+function buildGen(q,I){
+  const rs=Array.isArray(I&&I.readings)?I.readings:[];const seen=new Set(),C=[];
+  for(const r of rs){if(!r||typeof r.reading!=='string'||!r.reading.trim())continue;let id=slug(r.key)||('reading-'+(C.length+1));while(seen.has(id))id+='-2';seen.add(id);
+    const p=Number(r.p);C.push({id,label:r.reading.trim().slice(0,300),p:Number.isFinite(p)&&p>0?p:0.05,expr:id,answer:'',verify:null});if(C.length===4)break;}
+  if(!C.length)return null;const z=C.reduce((a,c)=>a+c.p,0);for(const c of C)c.p=+Math.max(0.001,c.p/z).toFixed(3);
+  const ctxKey=slug(I.ctx);
+  return{input:q,kind:'general',candidates:C,inherent:C.length>1,ctx:C.length>1&&ctxKey&&ctxKey!=='none'?'q|'+ctxKey:null,
+    note:C.length>1?String(I.note||'').slice(0,300):''};}
+async function askAny(q){
+  if(ctl)ctl.abort();ctl=new AbortController();const my=ctl;current=null;
+  $('result').innerHTML='<div class="row" style="justify-content:space-between"><span class="pill warn">reading the question…</span><button data-gq="stop">Stop</button></div><p class="note" style="margin:0">Claude is listing the ways this could be meant. It does not answer yet; the receiver decides which reading to use.</p>';
+  $('pipe').innerHTML='Waiting for the readings…';
+  const sample=sampleP?await sampleP:null;
+  if(!sample){$('result').innerHTML='<span class="pill warn">math only here</span><p style="margin:0">Questions beyond math need this page opened inside Claude, where it can ask Claude on your account. Math and the Gaussian view still work.</p>';$('pipe').innerHTML='';return;}
+  let I;try{I=await sample.json(interpretPrompt(q),{modelTier:'quick',signal:my.signal});}
+  catch(e){if(e&&e.code==='cancelled'){$('result').innerHTML='<p class="note" style="margin:0">Stopped.</p>';return;}$('result').innerHTML='<span class="pill bad">could not ask</span><p style="margin:0">'+esc(errCopy(e&&e.code))+'</p>';$('pipe').innerHTML='';return;}
+  if(my!==ctl)return;
+  const G0=buildGen(q,I);
+  if(!G0){$('result').innerHTML='<span class="pill bad">no readings</span><p style="margin:0">Claude did not return any readings. Try rewording it.</p>';return;}
+  const rec=rx.process(q,{precedence:'standard'},()=>G0);rec.general=true;rec.answers={};rec.showId=rec.status==='answer'?rec.selected.id:null;
+  current={rec,item:null};showGeneral();render();
+  if(rec.status==='answer')answerReading(rec,rec.selected.id);
+}
+async function answerReading(rec,id){
+  const c=rec.candidates.find(x=>x.id===id);if(!c)return;const sample=sampleP?await sampleP:null;if(!sample)return;
+  if(ctl)ctl.abort();ctl=new AbortController();const my=ctl;
+  rec.showId=id;rec.answers[id]={text:'',state:'thinking'};showGeneral();
+  try{const{text,truncated}=await sample(answerPrompt(rec.input,c.label),{signal:my.signal,onText:({text})=>{rec.answers[id]={text,state:'streaming'};paintAnswer(rec);}});
+    rec.answers[id]={text,state:truncated?'truncated':'done'};
+    convo.push({q:rec.input,reading:c.label,a:text.slice(0,600)});if(convo.length>4)convo.shift();}
+  catch(e){rec.answers[id]={text:(e&&e.text)||'',state:e&&e.code==='cancelled'?'stopped':'error',code:e&&e.code};}
+  if(current&&current.rec===rec)showGeneral();
+}
+function paintAnswer(rec){const el=$('ans'),st=$('ansst');const a=rec.answers[rec.showId];if(!el||!a)return;
+  el.textContent=a.text||(a.state==='thinking'?'Thinking…':'');
+  if(st)st.innerHTML=a.state==='streaming'||a.state==='thinking'?'<button data-gq="stop">Stop</button>':a.state==='truncated'?'<span class="warn">Cut short. Ask for less at a time.</span>':
+    a.state==='stopped'?'<span class="muted">Stopped.</span>':a.state==='error'?'<span class="bad">'+esc(errCopy(a.code))+'</span>':'<span class="muted">Not verified: the receiver chose the reading; Claude wrote the answer.</span>';}
+function showGeneral(){
+  const rec=current.rec,el=$('result');let h='';
+  const st=rec.status==='answer'?['ok','reading chosen']:['warn','held open — which did you mean?'];
+  h+='<div class="row" style="justify-content:space-between"><span class="pill '+st[0]+'">'+st[1]+'</span><span class="mono muted">narrated by '+rec.narrator+'</span></div>';
+  if(rec.gen.note)h+='<p class="note" style="margin:0">'+esc(rec.gen.note)+'</p>';
+  const shown=rec.showId&&rec.candidates.find(c=>c.id===rec.showId);
+  if(shown){h+='<div class="mono">Taken as: '+esc(shown.label)+(rec.selected===shown?' · SG confidence '+Math.round((rec.confidence||0)*100)+'% (relevance, not proof)':' · your pick')+'</div>';
+    h+='<div class="ansbox" id="ans"></div><div class="note" id="ansst"></div>';}
+  if(rec.status==='ambiguous'&&!shown){h+='<p style="margin:0">The receiver is holding these readings open rather than guessing. Tap the one you meant:</p>';}
+  const others=rec.candidates.filter(c=>c!==shown&&c.admitted);
+  if(others.length)h+=(shown?'<p class="eyebrow" style="margin-top:4px">Other readings</p>':'')+others.map(c=>'<button class="reading" data-gq="pick:'+esc(c.id)+'">'+(shown?'I meant: ':'')+esc(c.label)+' <span class="muted mono">p='+c.p+'</span></button>').join('');
+  const filt=rec.candidates.filter(c=>!c.admitted&&c!==shown);
+  if(filt.length)h+='<div class="note">Filtered out by FT: '+filt.map(c=>'<button class="chip" data-gq="pick:'+esc(c.id)+'">'+esc(c.label)+'</button>').join(' ')+'</div>';
+  if(rec.reward===undefined){h+='<div class="row" id="fb"><span class="note">Your feedback teaches the receiver:</span>';
+    if(rec.status==='answer')h+='<button data-gq="ok">Right reading</button>';
+    if(rec.status==='ambiguous')h+='<button data-gq="ambig">Right to ask</button>';
+    h+='</div>';}
+  else h+='<div class="note">Feedback recorded · reward '+rec.reward+(rec.update&&rec.update.why.length?' · '+esc(rec.update.why.join('; ')):'')+'</div>';
+  el.innerHTML=h;paintAnswer(rec);renderPipe(rec);
+}
+$('result').addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-gq]');if(!b)return;const f=b.dataset.gq;
+  if(f==='stop'){if(ctl)ctl.abort();return;}
+  if(!current||!current.rec.general)return;const rec=current.rec;
+  if(f==='ok'){if(rec.reward===undefined){rx.feedback(rec,{label:rec.selected.id});saveRx();}showGeneral();render();return;}
+  if(f==='ambig'){if(rec.reward===undefined){rx.feedback(rec,{ambiguous:true});saveRx();}showGeneral();render();return;}
+  if(f.startsWith('pick:')){const id=f.slice(5);if(rec.reward===undefined){rx.feedback(rec,{label:id});saveRx();}render();answerReading(rec,id);}
+});
+
+// ---- learned state kept in this browser between visits ----
+function saveRx(){try{localStorage.setItem(SAVE_KEY,JSON.stringify({v:1,seed:rx.cfg.seed,params:rx.params.map(p=>p.value),occupant:rx.occupant,
+  slots:rx.slots.map(s=>({theta:s.theta,Q:s.Q,Qn:s.Qn})),memory:rx.memory,t:rx.t,errEma:rx.errEma,rewardHist:rx.rewardHist.slice(-300),ueHist:rx.stats.ueHist.slice(-300)}));}catch(e){}}
+function loadRx(){try{const s=JSON.parse(localStorage.getItem(SAVE_KEY)||'null');if(!s||s.v!==1||s.params.length!==4||s.occupant.length!==4)return false;
+  s.params.forEach((v,j)=>rx.params[j].value=v);rx.occupant=s.occupant.slice();s.slots.forEach((x,k)=>{rx.slots[k].theta=x.theta;rx.slots[k].Q=x.Q;rx.slots[k].Qn=x.Qn;});
+  rx.memory=s.memory||{};rx.t=s.t||0;rx.errEma=s.errEma;rx.rewardHist=s.rewardHist||[];rx.stats.ueHist=s.ueHist||[];
+  rx.L('restore','Restored learned state from this browser ('+rx.t+' problems with feedback so far)');return true;}catch(e){return false;}}
+
+// ---- Gaussian square view (exact; no interpretation choice, so the receiver is not used) ----
+function showGauss(g){
+  current=null;
+  if(g.error){$('result').innerHTML='<span class="pill bad">invalid input</span><div class="answer bad" style="font-size:18px">'+esc(g.error)+'</div>';$('pipe').innerHTML='';return;}
+  const c=Gauss.compute(g),F=Gauss.fmtC,z=F(c.m,c.n),zz=F(c.X,c.Y),ok=b=>b?'<span class="ok">✓</span>':'<span class="bad">✗</span>';
+  let h='<div class="row" style="justify-content:space-between"><span class="pill ok">exact construction</span><span class="mono muted">i read as the imaginary unit</span></div>';
+  h+='<div class="answer">('+esc(z)+')² = '+esc(zz)+'</div>';
+  if(g.note)h+='<div class="note">'+esc(g.note)+'</div>';
+  h+='<div class="gx"><figure><figcaption class="eyebrow">Triangle of z²</figcaption>'+Gauss.triSVG(c)+'</figure><figure><figcaption class="eyebrow">z and its mirror z̄</figcaption>'+Gauss.mirrorSVG(c)+'</figure></div>';
+  h+='<div class="tbl"><table><tr><th>View</th><th>Formula</th><th class="num">Value</th></tr>'+
+    '<tr><td>Real part of z² · hyperbolic product (m+nj)(m−nj) · dot product z·z̄</td><td class="mono">m² − n²</td><td class="num">'+c.X+'</td></tr>'+
+    '<tr><td>Imaginary part of z² · size of cross product z×z̄</td><td class="mono">2mn</td><td class="num">'+c.Y+'</td></tr>'+
+    '<tr><td>Conjugate sum (m+ni)+(m−ni)</td><td class="mono">2m</td><td class="num">'+(2*c.m)+(c.sumMatches?' <span class="muted">= Im z²</span>':' <span class="warn">≠ Im z² (equal only when n = ±1)</span>')+'</td></tr>'+
+    '<tr><td>Conjugate product (m+ni)(m−ni) · |z|² · |z²|</td><td class="mono">m² + n²</td><td class="num">'+c.N+'</td></tr>'+
+    '<tr><td>|z|</td><td class="mono">√(m² + n²)</td><td class="num">'+(Number.isInteger(Math.sqrt(c.N))?Math.sqrt(c.N):'√'+c.N+' ≈ '+Math.sqrt(c.N).toFixed(4))+'</td></tr>'+
+    '<tr><td>Angle between z and z̄ (twice the angle of z)</td><td class="mono">arccos((m²−n²)/(m²+n²))</td><td class="num">'+c.angle.toFixed(4)+'°</td></tr></table></div>';
+  h+='<div class="mono">'+ok(c.pyth)+' '+c.X+'² + '+c.Y+'² = '+c.N+'² (checked exactly) · '+(c.degenerate?'<span class="warn">flat triangle: '+esc(c.whyNot)+'</span>':c.primitive?'primitive triple':'not primitive: '+esc(c.whyNot))+'</div>';
+  // primes
+  h+='<p class="eyebrow" style="margin-top:6px">Primes in the hypotenuse '+c.N+(c.isPrimeN?' (itself prime)':'')+'</p><div class="tbl"><table><tr><th class="num">p</th><th>Type in ℤ[i]</th><th>What it means here</th></tr>';
+  for(const f of c.fac){const pe=f.p+(f.e>1?'<sup>'+f.e+'</sup>':'');
+    if(f.type==='ramified')h+='<tr><td class="num">'+pe+'</td><td>ramified</td><td>2 = −i(1+i)², the one prime that is (up to a unit) its own conjugate</td></tr>';
+    else if(f.type==='inert')h+='<tr><td class="num">'+pe+'</td><td>inert (p ≡ 3 mod 4)</td><td>stays prime in ℤ[i]; a sum of two squares can only contain it to an even power '+ok(f.evenOk)+'</td></tr>';
+    else h+='<tr><td class="num">'+pe+'</td><td>splits (p ≡ 1 mod 4)</td><td>'+f.p+' = '+f.x+'² + '+f.y+'² = ('+f.x+'+'+f.y+'i)('+f.x+'−'+f.y+'i); root pair of a² ≡ −1: ('+f.r+', '+f.rp+')'+
+      (f.am!==undefined?'; here a = '+c.m+' ≡ '+f.am+' (mod '+f.p+'), one of the roots '+ok(f.amOk):'')+'</td></tr>';}
+  h+='</table></div>';
+  if(Math.abs(c.n)===1)h+='<p class="note" style="margin:0">With n = ±1 this is your a² + 1 family (a = '+c.m+'): every odd prime dividing '+c.N+' is ≡ 1 (mod 4), and a sits on one of its two roots.</p>';
+  $('result').innerHTML=h;
+  $('pipe').innerHTML='<p class="note" style="margin:0">Exact construction. There is only one reading of this input, so no candidates are formed and the receiver does not run or learn. Typing the same thing without "square of" or "^2" would go to the calculator, where i would be treated as an ordinary variable.</p>';
+}
+
+function showResult(){
+  const{rec,item}=current,el=$('result');let h='';
+  const st={answer:['ok','answer'],ambiguous:['warn','ambiguous — needs clarification'],error:['bad','invalid input'],'verify-failed':['bad','verification FAILED']}[rec.status];
+  h+='<div class="row" style="justify-content:space-between"><span class="pill '+st[0]+'">'+st[1]+'</span><span class="mono muted">narrated by '+rec.narrator+'</span></div>';
+  if(rec.status==='error')h+='<div class="answer bad">'+esc(rec.message)+'</div>';
+  if(rec.status==='answer'||rec.status==='verify-failed'){const s=rec.selected;
+    h+='<div class="answer">'+esc(rec.answer)+'</div><div class="mono">Interpretation: '+esc(s.expr)+(s.label&&rec.candidates.length>1?' · '+esc(s.label):'')+'</div>';
+    if(s.verify)h+='<div class="mono '+(s.verify.status==='pass'?'ok':s.verify.status==='fail'?'bad':'warn')+'">Verification '+s.verify.status+': '+esc(s.verify.detail)+'</div>';
+    if(s.result&&s.result.steps&&s.result.steps.length)h+='<details><summary>Steps</summary><ol class="steps">'+s.result.steps.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ol></details>';
+    const alts=rec.candidates.filter(c=>c!==s&&!c.error);if(alts.length)h+='<div class="note">Alternatives considered: '+alts.map(c=>esc(c.label)+' → '+esc(c.answer)+(c.admitted?'':' (filtered)')).join('; ')+'</div>';}
+  if(rec.status==='ambiguous'){h+='<p style="margin:0">'+esc(rec.gen.note)+'</p><div class="tbl"><table><tr><th>Reading</th><th>Structure</th><th>Result</th><th>Check</th></tr>'+
+    rec.candidates.filter(c=>c.admitted).map(c=>'<tr><td>'+esc(c.label)+'</td><td class="mono">'+esc(c.expr)+'</td><td class="mono">'+esc(c.answer)+'</td><td class="mono '+(c.verify&&c.verify.status==='pass'?'ok':'warn')+'">'+(c.verify?c.verify.status:'')+'</td></tr>').join('')+'</table></div>';}
+  // feedback
+  if(item){h+='<div class="note">Suite item · expected: '+esc(item.error?'invalid':item.ambiguous?'flag as ambiguous':item.isOp?item.op:item.expect)+' · '+(rec.reward===1?'<span class="ok">correct</span>':rec.reward===0.5?'<span class="warn">asked</span>':'<span class="bad">wrong</span>')+'</div>';}
+  else if(rec.reward===undefined){h+='<div class="row" id="fb"><span class="note">Your feedback teaches the receiver:</span>';
+    if(rec.status==='answer'||rec.status==='verify-failed'){h+='<button data-fb="correct">Correct</button>';
+      rec.candidates.filter(c=>c!==rec.selected&&!c.error).forEach(c=>h+='<button data-fb="pick:'+c.id+'">I meant '+esc(c.answer)+'</button>');h+='<button data-fb="none">Wrong</button>';}
+    if(rec.status==='ambiguous'){rec.candidates.filter(c=>c.admitted).forEach(c=>h+='<button data-fb="pick:'+c.id+'">I meant '+esc(c.answer)+'</button>');h+='<button data-fb="ambig">Right to ask</button>';}
+    if(rec.status==='error'){h+='<button data-fb="err">Yes, it is invalid</button><button data-fb="none">It was valid</button>';}
+    h+='</div>';}
+  else h+='<div class="note">Feedback recorded · reward '+rec.reward+(rec.update&&rec.update.why.length?' · '+esc(rec.update.why.join('; ')):'')+'</div>';
+  el.innerHTML=h;renderPipe(rec);
+}
+$('result').addEventListener('click',e=>{const f=e.target.dataset&&e.target.dataset.fb;if(!f||!current)return;const rec=current.rec;let truth={};
+  if(f==='correct')truth={label:rec.selected.id};else if(f.startsWith('pick:'))truth={label:f.slice(5)};else if(f==='ambig')truth={ambiguous:true};else if(f==='err')truth={error:true};
+  rx.feedback(rec,truth);saveRx();showResult();render();});
+
+function renderPipe(rec){
+  if(rec.status==='error'){$('pipe').innerHTML='<div class="stage"><b>FT</b><span>'+esc(rec.stages.FT.note)+'</span></div>';return;}
+  const s=rec.stages,C=rec.candidates;let h='<div class="tbl"><table><tr><th>Candidate</th><th>Structure</th><th>Result</th><th class="num">p</th><th>FT</th><th class="num">memory</th><th class="num">AR score</th><th class="num">SG conf.</th></tr>';
+  for(const c of C)h+='<tr><td>'+esc(c.label)+(rec.selected===c?' <span class="ok">◀ selected</span>':'')+'</td><td class="mono">'+esc(c.expr||'')+'</td><td class="mono">'+esc(c.answer||c.error||'')+'</td><td class="num">'+c.p+'</td><td class="mono '+(c.admitted?'ok':'muted')+'">'+(c.admitted?'admit':'reject')+' · '+esc(c.ftReason)+'</td><td class="num">'+(c.mem!==undefined?c.mem.toFixed(3):'—')+'</td><td class="num">'+(c.score!==undefined?c.score.toFixed(3):'—')+'</td><td class="num">'+(c.conf!==undefined?c.conf.toFixed(3):'—')+'</td></tr>';
+  h+='</table></div><div style="display:flex;flex-direction:column;gap:4px;margin-top:8px">';
+  h+='<div class="stage"><b style="color:var(--ft)">FT</b><span>threshold '+s.FT.threshold.toFixed(3)+' (FT_eff '+rec.eff.FT.toFixed(2)+'); admitted '+s.FT.admitted.join(', ')+(s.FT.rejected.length?'; rejected '+s.FT.rejected.join(', '):'')+'</span></div>';
+  h+='<div class="stage"><b style="color:var(--ti)">TI</b><span>λ = '+s.TI.lambda.toFixed(3)+' (window ≈ '+s.TI.window.toFixed(1)+' problems), context '+esc(s.TI.ctx||'none — unambiguous input, no memory used')+'; integrated evidence '+esc(JSON.stringify(Object.fromEntries(Object.entries(s.TI.memory).map(([k,v])=>[k,+v.toFixed(3)]))))+'</span></div>';
+  h+='<div class="stage"><b>AR</b><span>'+esc(s.AR.why)+(s.AR.selected?' → '+esc(s.AR.selected):' → asks for clarification')+'</span></div>';
+  h+='<div class="stage"><b style="color:var(--sg)">SG</b><span>confidence gain '+s.SG.gain.toFixed(2)+', memory write weight '+s.SG.writeWeight.toFixed(2)+'. Confidence is relevance, not proof; the verifier decides validity.</span></div>';
+  h+='<div class="stage"><b style="color:var(--ue)">UE</b><span>UE_eff '+rec.eff.UE.toFixed(2)+' → adaptation step '+(rx.cfg.eta0*rec.eff.UE).toFixed(3)+', switch-attempt probability '+(rx.cfg.kappa*rec.eff.UE).toFixed(3)+'</span></div></div>';
+  $('pipe').innerHTML=h;
+}
+function render(){
+  $('narr').textContent=rx.narrator();$('narr').style.color='var('+PC[rx.narrator()]+')';
+  $('params').innerHTML=rx.params.map((p,j)=>'<div class="prow"><span style="color:var('+PC[p.id]+')">'+p.id+'</span><span class="track"><i style="width:'+(p.value*100)+'%;background:var('+PC[p.id]+')"></i></span><span>'+p.value.toFixed(3)+' / '+rx.eff(j).toFixed(3)+'</span></div>').join('');
+  $('slots').innerHTML=rx.slots.map((s,k)=>{const j=rx.occupant[k],id=R.PARAMS[j];
+    return'<div class="slot'+(k===0?' narr':'')+'"><span class="sign">'+(s.sign==='+'?'+':'−')+'</span><span class="muted">slot '+k+(k===0?' · narrator':'')+'</span><span class="occ" style="color:var('+PC[id]+')">'+id+'</span><span>Θ '+s.theta.toFixed(3)+'</span><span class="muted">Q '+R.PARAMS.map((n,i)=>'<span style="color:var('+PC[n]+')">'+s.Q[i].toFixed(2)+'</span>').join(' ')+'</span></div>';}).join('');
+  $('r-ad').textContent=rx.stats.adaptRate.toFixed(4);$('r-sw').textContent=rx.stats.switchRate.toFixed(3);$('r-ue').textContent=rx.params[2].value.toFixed(3);
+  $('log').innerHTML=rx.log.slice(-60).reverse().map(l=>'<div><span class="tag">#'+l.t+' '+l.type+'</span> '+esc(l.msg)+'</div>').join('')||'<div class="muted">No changes yet. Give feedback or run suite items.</div>';
+  drawPerf();
+}
+function css(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim();}
+function drawPerf(){const c=$('perf'),dpr=window.devicePixelRatio||1,w=c.clientWidth,h=c.clientHeight;if(!w)return;c.width=w*dpr;c.height=h*dpr;const g=c.getContext('2d');g.setTransform(dpr,0,0,dpr,0,0);
+  const L=26,T=6,B=14,W=w-L-6,H=h-T-B,rw=rx.rewardHist,ue=rx.stats.ueHist,n=Math.max(2,rw.length);
+  g.font='11px "Red Hat Mono",monospace';g.fillStyle=css('--muted');g.strokeStyle=css('--line');
+  [0,0.5,1].forEach(v=>{const y=T+H*(1-v);g.beginPath();g.moveTo(L,y);g.lineTo(L+W,y);g.stroke();g.fillText(v.toFixed(1),2,y+4);});
+  g.fillText(rw.length+' problems with feedback',L,h-2);
+  rw.forEach((r,i)=>{g.fillStyle=r===1?css('--ok'):r===0.5?css('--warn'):css('--bad');g.fillRect(L+W*i/(n-1)-1.5,T+H*(1-r)-1.5,3,3);});
+  g.strokeStyle=css('--ue');g.lineWidth=2;g.beginPath();ue.forEach((u,i)=>{const x=L+W*i/(n-1),y=T+H*(1-u);i?g.lineTo(x,y):g.moveTo(x,y);});g.stroke();}
+function stepSuite(k){for(let i=0;i<k;i++){if(cursor>=stream.length){cursor=0;}const it=stream[cursor++];const rec=rx.process(it.q,it.settings||{precedence:'standard'});rx.feedback(rec,S.truthFor(rec,it));current={rec,item:it};saveRx();$('q').value=it.q;$('prec').value=(it.settings||{}).precedence||'standard';}showResult();render();}
+
+$('solve').onclick=solve;$('q').addEventListener('keydown',e=>{if(e.key==='Enter')solve();});
+$('reset').onclick=()=>{if(ctl)ctl.abort();try{localStorage.removeItem(SAVE_KEY);}catch(e){}reset();};$('step1').onclick=()=>stepSuite(1);$('step20').onclick=()=>stepSuite(20);
+$('runA').onclick=()=>{const T=S.acceptance();$('tests').innerHTML='<table><tr><th>#</th><th>Test</th><th>Result</th><th>Detail</th></tr>'+T.map(t=>'<tr><td class="num">'+t.id+'</td><td>'+esc(t.name)+'</td><td class="'+(t.pass?'ok':'bad')+'">'+(t.pass?'PASS':'FAIL')+'</td><td class="mono">'+esc(t.detail)+'</td></tr>').join('')+'</table>';
+  expResults=expResults||{};expResults.acceptance=T;};
+$('runE').onclick=()=>{$('exps').innerHTML='<p class="note">Running 5 configurations × 10 seeds × 200 problems…</p>';setTimeout(()=>{const E=S.runExperiments();E.acceptance=(expResults&&expResults.acceptance)||S.acceptance();expResults=E;
+  const f=v=>v?(v.mean*1).toFixed(3)+' <span class="muted">±'+v.sd.toFixed(3)+'</span>':'—',fn=v=>v?v.mean.toFixed(1)+' <span class="muted">±'+v.sd.toFixed(1)+'</span>':'—';
+  const rows=[['Exact answer accuracy','exact',f],['Ambiguous inputs flagged','interpAmbig',f],['Operation selection (all)','interpOp',f],['  before contradiction','opBeforeFlip',f],['  after contradiction','opAfterFlip',f],
+    ['Invalid inputs detected','errDetect',f],['Op items to recover (4 in a row)','recovery',fn],['Slot switches','switches',fn],['Switches that did not help','unnecessary',fn],['Overall','overall',f]];
+  const K=Object.keys(E.configs);
+  $('exps').innerHTML='<table><tr><th>Metric (mean ± sd over 10 seeds)</th>'+K.map(k=>'<th title="'+esc(E.configs[k].label)+'">'+k+'</th>').join('')+'</tr>'+rows.map(([n,key,fm])=>'<tr><td>'+n+'</td>'+K.map(k=>'<td class="num">'+fm(E.configs[k][key])+'</td>').join('')+'</tr>').join('')+
+    '<tr><td>Accuracy by block of 50</td>'+K.map(k=>'<td class="num">'+E.configs[k].blocks.map(b=>b.mean.toFixed(2)).join(' / ')+'</td>').join('')+'</tr></table><p class="note">'+K.map(k=>k+' = '+esc(E.configs[k].label.split('· ')[1])).join(' · ')+'. The contradiction flips which operation each context means at problem 120.</p>';
+  $('json').value=JSON.stringify(E,null,1);$('json').hidden=false;},30);};
+$('copy').onclick=()=>{if(!expResults){$('exps').insertAdjacentHTML('afterbegin','<p class="note">Run the experiments first.</p>');return;}const t=JSON.stringify(expResults,null,1);$('json').value=t;$('json').hidden=false;
+  navigator.clipboard.writeText(t).then(()=>{$('copy').textContent='Copied';setTimeout(()=>$('copy').textContent='Copy results JSON',1500);}).catch(()=>{$('json').select();});};
+try{matchMedia('(prefers-color-scheme: dark)').addEventListener('change',drawPerf);}catch(e){}
+window.addEventListener('resize',drawPerf);
+reset();if(loadRx())render();solve();
+})();
+
+</script>
+
+</body></html>
